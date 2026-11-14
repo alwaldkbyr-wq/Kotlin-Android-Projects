@@ -35,7 +35,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | tr -cd "A-Za-z0-9+/")"
-          case $(("${#KEY_DATA}" % 4)) in
+          case $(( ${#KEY_DATA} % 4 )) in
             2) KEY_DATA="${KEY_DATA}==" ;;
             3) KEY_DATA="${KEY_DATA}=" ;;
           esac
