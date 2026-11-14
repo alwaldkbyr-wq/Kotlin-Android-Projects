@@ -30,13 +30,8 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
       - name: Prepare release signing key
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release-key.jks
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release-key.jks
       - name: Build signed release APK
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
@@ -46,15 +41,13 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease
       - name: Upload signed release APK
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: mawaqeet-release-1.0.0
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-      - name: Upload APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: mawaqeet-debug-apk
