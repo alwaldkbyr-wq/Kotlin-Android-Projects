@@ -523,7 +523,7 @@ private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color,
 }
 
 @Composable
-private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, themeIndex: Int, onThemeChange: (Int) -> Unit, accent: Color, fg: Color, muted: Color,
+private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, themeIndex: Int, onThemeChange: (Int) -> Unit,
     prayerMethodIndex: Int, onPrayerMethodChange: (Int) -> Unit, hanafiAsr: Boolean, onHanafiAsrChange: (Boolean) -> Unit,
     accent: Color, fg: Color, muted: Color, onLocate: () -> Unit, onSettings: () -> Unit) {
     var methodExpanded by remember { mutableStateOf(false) }
