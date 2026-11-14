@@ -5,17 +5,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 
 val MawaqeetDisplayFont = FontFamily(
-    Font(R.font.thmanyahserifdisplay-light, FontWeight.Light),
-    Font(R.font.thmanyahserifdisplay-regular, FontWeight.Normal),
-    Font(R.font.thmanyahserifdisplay-medium, FontWeight.Medium),
-    Font(R.font.thmanyahserifdisplay-bold, FontWeight.Bold),
-    Font(R.font.thmanyahserifdisplay-black, FontWeight.Black)
+    Font(R.font.thmanyah_serif_display_light, FontWeight.Light),
+    Font(R.font.thmanyah_serif_display_regular, FontWeight.Normal),
+    Font(R.font.thmanyah_serif_display_medium, FontWeight.Medium),
+    Font(R.font.thmanyah_serif_display_bold, FontWeight.Bold),
+    Font(R.font.thmanyah_serif_display_black, FontWeight.Black)
 )
 
 val MawaqeetTextFont = FontFamily(
-    Font(R.font.thmanyahseriftext-light, FontWeight.Light),
-    Font(R.font.thmanyahseriftext-regular, FontWeight.Normal),
-    Font(R.font.thmanyahseriftext-medium, FontWeight.Medium),
-    Font(R.font.thmanyahseriftext-bold, FontWeight.Bold),
-    Font(R.font.thmanyahseriftext-black, FontWeight.Black)
+    Font(R.font.thmanyah_serif_text_light, FontWeight.Light),
+    Font(R.font.thmanyah_serif_text_regular, FontWeight.Normal),
+    Font(R.font.thmanyah_serif_text_medium, FontWeight.Medium),
+    Font(R.font.thmanyah_serif_text_bold, FontWeight.Bold),
+    Font(R.font.thmanyah_serif_text_black, FontWeight.Black)
 )
