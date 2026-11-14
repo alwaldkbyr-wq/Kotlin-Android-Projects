@@ -34,7 +34,12 @@ jobs:
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          printf "%s" "$ANDROID_KEYSTORE_BASE64" | tr -cd "A-Za-z0-9+/=" | base64 --decode > release-key.jks
+          KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | tr -cd "A-Za-z0-9+/")"
+          case $(("${#KEY_DATA}" % 4)) in
+            2) KEY_DATA="${KEY_DATA}==" ;;
+            3) KEY_DATA="${KEY_DATA}=" ;;
+          esac
+          printf "%s" "$KEY_DATA" | base64 --decode > release-key.jks
           keytool -list -keystore release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
       - name: Build signed release APK
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
