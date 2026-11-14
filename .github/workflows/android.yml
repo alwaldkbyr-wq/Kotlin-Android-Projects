@@ -34,13 +34,44 @@ jobs:
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | tr -cd "A-Za-z0-9+/")"
-          case $(( ${#KEY_DATA} % 4 )) in
-            2) KEY_DATA="${KEY_DATA}==" ;;
-            3) KEY_DATA="${KEY_DATA}=" ;;
-          esac
+          # Accept either the raw Base64 value or a copied KEY=value line.
+          KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | sed -E '1s/^[A-Z0-9_]+=//' | tr -d '[:space:]')"
+          if [ -z "$KEY_DATA" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is empty. Re-enter the Base64 value from signing-secrets.txt."
+            exit 1
+          fi
+          if ! printf "%s" "$KEY_DATA" | grep -Eq '^[A-Za-z0-9+/]+={0,2}
+      - name: Build signed release APK
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_PATH: release-key.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle assembleRelease
+      - name: Upload signed release APK
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mawaqeet-release-1.0.1
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mawaqeet-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 contains characters outside Base64. Copy only the value, without quotes or the variable name."
+            exit 1
+          fi
           printf "%s" "$KEY_DATA" | base64 --decode > release-key.jks
-          keytool -list -keystore release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          if [ ! -s release-key.jks ]; then
+            echo "::error::The decoded signing file is empty."
+            exit 1
+          fi
+          keytool -list -keystore release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD"
       - name: Build signed release APK
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
