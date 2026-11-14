@@ -339,7 +339,7 @@ private fun PrayerPage(today: LocalDate, hijri: String, times: PrayerTimes?, loc
             Text("تُستخدم حالياً زاوية فجر 18° وعشاء 17°، والعصر على المذهب القياسي. قد تختلف النتائج عن تقويم بلدك.", color = muted, fontSize = 11.sp, lineHeight = 17.sp)
         }
     }
-    GlassPanel() {
+    GlassPanel(dark) {
         Text("تنبيه الدقة", color = accent, fontWeight = FontWeight.Bold)
         Text("الحساب الحالي تأسيسي، ولا يطبق بعد تعديلات خطوط العرض العالية أو إعدادات الهيئات المحلية. قارن النتائج بتقويم المسجد أو الجهة الرسمية.", color = muted, fontSize = 12.sp, lineHeight = 18.sp)
     }
