@@ -271,10 +271,10 @@ fun MawaqeetApp() {
                         }
                         when (tab) {
                             AppTab.HOME -> {
-                                item { HomePage(today, hijri.fullDate, moon.phaseName, locationMessage, latitude, longitude, times, accent, foreground, muted, darkMode, { selectedTab = AppTab.PRAYER }, { selectedTab = AppTab.MOON }, { selectedTab = AppTab.SKY }, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { HomePage(today, hijri.fullDate, moon.phaseName, locationMessage, latitude, longitude, times, accent, foreground, muted, darkMode, { selectedTab = AppTab.PRAYER }, { selectedTab = AppTab.MOON }, { selectedTab = AppTab.SKY }, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                             AppTab.PRAYER -> {
-                                item { PrayerPage(today, hijri.fullDate, times, locationMessage, latitude, longitude, accent, foreground, muted, darkMode, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { PrayerPage(today, hijri.fullDate, times, locationMessage, latitude, longitude, accent, foreground, muted, darkMode, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                             AppTab.MOON -> {
                                 item { MoonPage(moon, accent, foreground, muted, darkMode) }
@@ -283,10 +283,10 @@ fun MawaqeetApp() {
                                 item { SkyPage(times, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SETTINGS -> {
-                                item { SettingsPage(darkMode, { darkMode = it }, motionEnabled, { motionEnabled = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { SettingsPage(darkMode, { darkMode = it }, motionEnabled, { motionEnabled = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                         }
-                        item { Text("مواقيت • إصدار 1.0.0", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+                        item { Text("مواقيت • إصدار 1.0.1", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     }
                 }
             }
