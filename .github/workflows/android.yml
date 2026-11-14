@@ -53,16 +53,17 @@ jobs:
             echo "::error::ANDROID_KEYSTORE_BASE64 is not valid Base64. Copy only its value from signing-secrets.txt."
             exit 1
           fi
-          printf "%s" "$KEY_DATA" | base64 --decode > release-key.jks
-          if [ ! -s release-key.jks ]; then
+          mkdir -p app
+          printf "%s" "$KEY_DATA" | base64 --decode > app/release-key.jks
+          if [ ! -s app/release-key.jks ]; then
             echo "::error::Decoded signing file is empty."
             exit 1
           fi
-          keytool -list -keystore release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD"
+          keytool -list -keystore app/release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD"
       - name: Build signed release APK
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
-          ANDROID_KEYSTORE_PATH: release-key.jks
+          ANDROID_KEYSTORE_PATH: app/release-key.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
