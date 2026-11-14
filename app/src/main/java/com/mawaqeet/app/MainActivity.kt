@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.compositionLocalOf
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -89,6 +90,7 @@ private data class ThemePalette(
     val textDark: Color = Color(0xFF1B2A4A), val textLight: Color = Color(0xFFF5F2EA)
 )
 private val LocalMotionEnabled = compositionLocalOf { true }
+private val GlassCardSequence = AtomicInteger(0)
 
 private val ThemePalettes = listOf(
     ThemePalette("أخضر وعاجي", Color(0xFF164B3B), Color(0xFFB8935A), Color(0xFFF5F0E6), Color(0xFF102B26), Color(0xFF1C4037)),
@@ -221,7 +223,7 @@ fun MawaqeetApp() {
       CompositionLocalProvider(LocalMotionEnabled provides motionEnabled) {
         val foreground = if (darkMode) palette.textLight else palette.textDark
         val muted = if (darkMode) Color(0xFFC2D0CE) else Color(0xFF52636A)
-        val accent = palette.accent
+        val accent = if (darkMode) palette.accent else palette.primary
         val background = if (darkMode) palette.darkBg else palette.lightBg
         Scaffold(
             containerColor = background,
@@ -561,9 +563,10 @@ private fun QuickTile(title: String, subtitle: String, icon: ImageVector, accent
 @Composable
 private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     val motion = LocalMotionEnabled.current
+    val cardIndex = remember { GlassCardSequence.getAndIncrement() % 6 }
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (motion) delay(55)
+        if (motion) delay(55L + cardIndex * 75L)
         entered = true
     }
     val fall by animateFloatAsState(targetValue = if (entered) 0f else if (motion) -34f else 0f, animationSpec = if (motion) spring(dampingRatio = .68f, stiffness = 170f) else tween(160), label = "glass-card-fall")
