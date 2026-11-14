@@ -157,7 +157,7 @@ fun MawaqeetApp() {
                 }.maxByOrNull { it.time }
                 if (cached != null) acceptLocation(cached)
                 else {
-                    locationMessage = if (providers.isEmpty()) "خدمة الموقع متوقفة؛ فعّلها من الإعدادات" else "جارٍ البحث عن موقعك… أبقِ التطبيق مفتوحاً"
+                    locationMessage = if (providers.isEmpty()) "خدمة الموقع متوقفة؛ فعّلها من الإعدادات" else "جارٍ حفظ موقعك لأول مرة…"
                     locationListener?.let { manager.removeUpdates(it) }
                     val listener = object : LocationListener {
                         override fun onLocationChanged(location: Location) = acceptLocation(location)
@@ -205,7 +205,14 @@ fun MawaqeetApp() {
         onDispose { locationListener?.let { manager.removeUpdates(it) } }
     }
 
-    val today = LocalDate.now()
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val currentDate = LocalDate.now()
+            if (today != currentDate) today = currentDate
+            delay(60_000)
+        }
+    }
     val hijri = remember(today) { HijriCalendarInfo.from(today) }
     val moon = remember(today) { MoonInfo.forDate(today) }
     val offset = ZoneId.systemDefault().rules.getOffset(java.time.Instant.now()).totalSeconds / 3600.0
