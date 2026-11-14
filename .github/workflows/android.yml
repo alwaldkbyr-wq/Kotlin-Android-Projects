@@ -34,8 +34,17 @@ jobs:
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          # Accept raw Base64 or a copied KEY=value line.
-          KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | sed -E '1s/^[A-Z0-9_]+=//' | tr -d '[:space:]')"
+          # Accept wrapped Base64, or the Base64 section copied from signing-secrets.txt.
+          # Stop before any following ANDROID_* secret labels.
+          KEY_DATA="$(printf "%s\\n" "$ANDROID_KEYSTORE_BASE64" | awk '
+            NR == 1 && /^ANDROID_KEYSTORE_BASE64[=:]/ {
+              sub(/^ANDROID_KEYSTORE_BASE64[=:][[:space:]]*/, "")
+              print
+              next
+            }
+            /^ANDROID_[A-Z0-9_]+[=:]/ { exit }
+            { print }
+          ' | tr -d '[:space:]')"
           if [ -z "$KEY_DATA" ]; then
             echo "::error::ANDROID_KEYSTORE_BASE64 is empty."
             exit 1
