@@ -16,6 +16,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -65,11 +72,12 @@ import java.util.Locale
 
 private val Night = Color(0xFF071522)
 private val DeepBlue = Color(0xFF102B40)
-private val Emerald = Color(0xFF1C7663)
-private val Gold = Color(0xFFE7C987)
-private val LightBg = Color(0xFFF1F5F3)
-private val LightSurface = Color(0xFFFFFFFF)
-private val Ink = Color(0xFF183448)
+private val Emerald = Color(0xFF1F5F66)
+private val Gold = Color(0xFFB8935A)
+private val Navy = Color(0xFF1C3157)
+private val LightBg = Color(0xFFF4F0E6)
+private val LightSurface = Color(0xFFFFFCF5)
+private val Ink = Color(0xFF1C3157)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,6 +98,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
 fun MawaqeetApp() {
     val context = LocalContext.current
     var darkMode by remember { mutableStateOf(true) }
+    var motionEnabled by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
     var latitude by remember { mutableStateOf<Double?>(null) }
     var longitude by remember { mutableStateOf<Double?>(null) }
@@ -168,7 +177,7 @@ fun MawaqeetApp() {
         primary = Emerald, secondary = Gold, background = Night, surface = DeepBlue,
         onBackground = Color(0xFFEAF2F0), onSurface = Color(0xFFEAF2F0)
     ) else lightColorScheme(
-        primary = Emerald, secondary = Color(0xFF9B742E), background = LightBg,
+        primary = Emerald, secondary = Gold, background = LightBg,
         surface = LightSurface, onBackground = Ink, onSurface = Ink
     )
 
@@ -180,7 +189,7 @@ fun MawaqeetApp() {
         Scaffold(
             containerColor = background,
             bottomBar = {
-                NavigationBar(containerColor = if (darkMode) Color(0xEE0C2233) else Color(0xF2FFFFFF)) {
+                NavigationBar(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).clip(RoundedCornerShape(28.dp)).border(1.dp, Gold.copy(alpha = .28f), RoundedCornerShape(28.dp)), containerColor = if (darkMode) Color(0xDD102B40) else Color(0xEFFFFFFF), tonalElevation = 0.dp) {
                     AppTab.values().forEach { tab ->
                         NavigationBarItem(
                             selected = selectedTab == tab,
@@ -201,7 +210,11 @@ fun MawaqeetApp() {
                 AmbientBackdrop(darkMode)
                 AnimatedContent(
                     targetState = selectedTab,
-                    transitionSpec = { androidx.compose.animation.fadeIn(tween(260)) togetherWith androidx.compose.animation.fadeOut(tween(180)) },
+                    transitionSpec = {
+                        if (!motionEnabled) androidx.compose.animation.fadeIn(tween(160)) togetherWith androidx.compose.animation.fadeOut(tween(160))
+                        else (slideInHorizontally(initialOffsetX = { full -> full / 5 }, animationSpec = spring(dampingRatio = .82f, stiffness = 420f)) + scaleIn(initialScale = .92f, animationSpec = tween(380))) togetherWith
+                            (slideOutHorizontally(targetOffsetX = { full -> -full / 8 }, animationSpec = tween(280)) + scaleOut(targetScale = .97f, animationSpec = tween(280)))
+                    },
                     label = "page-transition"
                 ) { tab ->
                     LazyColumn(
@@ -235,10 +248,10 @@ fun MawaqeetApp() {
                                 item { SkyPage(times, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SETTINGS -> {
-                                item { SettingsPage(darkMode, { darkMode = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { SettingsPage(darkMode, { darkMode = it }, motionEnabled, { motionEnabled = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                         }
-                        item { Text("مواقيت • إصدار تجريبي 0.3.0", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+                        item { Text("مواقيت • إصدار 1.0.0", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     }
                 }
             }
@@ -259,7 +272,7 @@ private fun AmbientBackdrop(dark: Boolean) {
         animationSpec = infiniteRepeatable(tween(6200), RepeatMode.Reverse),
         label = "pulse"
     )
-    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(Night, DeepBlue, Color(0xFF102D35))) else Brush.verticalGradient(listOf(LightBg, Color(0xFFE4EFEB), Color(0xFFF7F8F4))))) {
+    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(Night, Navy, Color(0xFF1F5F66))) else Brush.verticalGradient(listOf(LightBg, Color(0xFFE7F0EB), Color(0xFFFFFCF5))))) {
         Box(Modifier.offset(x = drift.dp, y = 90.dp).size(230.dp).align(Alignment.TopEnd).blur(62.dp)
             .background((if (dark) Emerald else Color(0xFF72B6A0)).copy(alpha = pulse), CircleShape))
         Box(Modifier.offset(x = (-drift).dp, y = 390.dp).size(190.dp).align(Alignment.CenterStart).blur(58.dp)
@@ -389,7 +402,7 @@ private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color,
 }
 
 @Composable
-private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, location: String, accent: Color, fg: Color, muted: Color,
+private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, accent: Color, fg: Color, muted: Color,
     onLocate: () -> Unit, onSettings: () -> Unit) {
     PageHeading("الإعدادات", "اجعل مواقيت أقرب إلى طريقتك", accent, fg)
     GlassPanel(dark) {
@@ -407,6 +420,16 @@ private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, locatio
         }
     }
     GlassPanel(dark) {
+        Text("الحركة", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if (motion) "الحركات مفعّلة" else "تقليل الحركة", color = fg, fontWeight = FontWeight.SemiBold)
+                Text("إيقاف الحركات لتجربة أبسط وأخف", color = muted, fontSize = 11.sp)
+            }
+            Switch(checked = motion, onCheckedChange = onMotionChange)
+        }
+    }
+    GlassPanel(dark) {
         Text("الموقع", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(location, color = muted, fontSize = 12.sp)
         Button(onClick = onLocate) { Text("تحديث الموقع") }
@@ -414,7 +437,7 @@ private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, locatio
     }
     GlassPanel(dark) {
         Text("عن التطبيق", color = accent, fontWeight = FontWeight.Bold)
-        Text("مواقيت 0.3.0 • نسخة تطويرية. بعض الحسابات والمؤشرات ما زالت تقريبية وقيد التطوير.", color = muted, fontSize = 12.sp, lineHeight = 18.sp)
+        Text("مواقيت 1.0.0 • نسخة تطويرية. بعض الحسابات والمؤشرات ما زالت تقريبية وقيد التطوير.", color = muted, fontSize = 12.sp, lineHeight = 18.sp)
     }
 }
 
@@ -449,13 +472,25 @@ private fun QuickTile(title: String, subtitle: String, icon: ImageVector, accent
 
 @Composable
 private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
-    val fill = if (dark) listOf(Color.White.copy(alpha = .14f), Color.White.copy(alpha = .055f))
-        else listOf(Color.White.copy(alpha = .88f), Color.White.copy(alpha = .58f))
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(35)
+        entered = true
+    }
+    val fall by animateFloatAsState(targetValue = if (entered) 0f else -24f, animationSpec = spring(dampingRatio = .62f, stiffness = 260f), label = "glass-card-fall")
+    val reveal by animateFloatAsState(targetValue = if (entered) 1f else .92f, animationSpec = spring(dampingRatio = .78f, stiffness = 300f), label = "glass-card-scale")
+    val fill = if (dark) listOf(Color.White.copy(alpha = .15f), Color.White.copy(alpha = .055f))
+        else listOf(Color.White.copy(alpha = .86f), Color(0xFFF7F1E5).copy(alpha = .72f))
     val line = if (dark) Color.White.copy(alpha = .2f) else Color.White.copy(alpha = .9f)
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(25.dp))
+        Modifier.fillMaxWidth().graphicsLayer {
+            translationY = fall
+            scaleX = reveal
+            scaleY = reveal
+            alpha = if (entered) 1f else .55f
+        }.clip(RoundedCornerShape(28.dp))
             .background(Brush.linearGradient(fill))
-            .border(1.dp, line, RoundedCornerShape(25.dp))
+            .border(1.dp, line, RoundedCornerShape(28.dp))
             .padding(17.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content
