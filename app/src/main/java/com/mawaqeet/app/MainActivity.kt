@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -225,13 +226,13 @@ fun MawaqeetApp() {
                                 item { HomePage(today, hijri.fullDate, moon.phaseName, locationMessage, latitude, longitude, times, accent, foreground, muted, darkMode, { selectedTab = AppTab.PRAYER }, { selectedTab = AppTab.MOON }, { selectedTab = AppTab.SKY }, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                             AppTab.PRAYER -> {
-                                item { PrayerPage(today, hijri.fullDate, times, locationMessage, latitude, longitude, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { PrayerPage(today, hijri.fullDate, times, locationMessage, latitude, longitude, accent, foreground, muted, darkMode, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                             AppTab.MOON -> {
                                 item { MoonPage(moon, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SKY -> {
-                                item { SkyPage(times, accent, foreground, muted) }
+                                item { SkyPage(times, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SETTINGS -> {
                                 item { SettingsPage(darkMode, { darkMode = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
@@ -317,9 +318,9 @@ private fun HomePage(
 
 @Composable
 private fun PrayerPage(today: LocalDate, hijri: String, times: PrayerTimes?, location: String, lat: Double?, lon: Double?,
-    accent: Color, fg: Color, muted: Color, onLocate: () -> Unit, onSettings: () -> Unit) {
+    accent: Color, fg: Color, muted: Color, dark: Boolean, onLocate: () -> Unit, onSettings: () -> Unit) {
     PageHeading("مواقيت الصلاة", "حسابات شمسية محلية حسب إحداثياتك", accent, fg)
-    GlassPanel() {
+    GlassPanel(dark) {
         Text(today.format(DateTimeFormatter.ofPattern("EEEE، d MMMM yyyy", Locale("ar"))), color = fg)
         Text(hijri, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(location + if (lat != null && lon != null) " • %.3f، %.3f".format(Locale.US, lat, lon) else "", color = muted, fontSize = 11.sp)
@@ -369,7 +370,7 @@ private fun MoonPage(moon: MoonInfo, accent: Color, fg: Color, muted: Color, dar
 }
 
 @Composable
-private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color) {
+private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color, dark: Boolean) {
     PageHeading("مرصد السماء", "الشمس والنهار ومعلومات الرصد", accent, fg)
     GlassPanel() {
         Text("الشمس والنهار", color = accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -447,7 +448,7 @@ private fun QuickTile(title: String, subtitle: String, icon: ImageVector, accent
 }
 
 @Composable
-private fun GlassPanel(dark: Boolean, content: @Composable ColumnScope.() -> Unit) {
+private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     val fill = if (dark) listOf(Color.White.copy(alpha = .14f), Color.White.copy(alpha = .055f))
         else listOf(Color.White.copy(alpha = .88f), Color.White.copy(alpha = .58f))
     val line = if (dark) Color.White.copy(alpha = .2f) else Color.White.copy(alpha = .9f)
