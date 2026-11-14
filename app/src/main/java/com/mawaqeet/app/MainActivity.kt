@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -87,6 +88,8 @@ private data class ThemePalette(
     val lightBg: Color, val darkBg: Color, val darkSurface: Color,
     val textDark: Color = Color(0xFF1B2A4A), val textLight: Color = Color(0xFFF5F2EA)
 )
+private val LocalMotionEnabled = compositionLocalOf { true }
+
 private val ThemePalettes = listOf(
     ThemePalette("أخضر وعاجي", Color(0xFF164B3B), Color(0xFFB8935A), Color(0xFFF5F0E6), Color(0xFF102B26), Color(0xFF1C4037)),
     ThemePalette("كحلي وذهبي", Color(0xFF172554), Color(0xFFD6AD60), Color(0xFFF4F0E6), Color(0xFF101A35), Color(0xFF202E52)),
@@ -215,6 +218,7 @@ fun MawaqeetApp() {
     )
 
     MaterialTheme(colorScheme = colors) {
+      CompositionLocalProvider(LocalMotionEnabled provides motionEnabled) {
         val foreground = if (darkMode) palette.textLight else palette.textDark
         val muted = if (darkMode) Color(0xFFC2D0CE) else Color(0xFF52636A)
         val accent = palette.accent
@@ -308,27 +312,32 @@ fun MawaqeetApp() {
                 }
             }
         }
+      }
     }
 }
 
 @Composable
 private fun AmbientBackdrop(dark: Boolean, palette: ThemePalette) {
+    val motion = LocalMotionEnabled.current
     val transition = rememberInfiniteTransition(label = "ambient")
-    val drift by transition.animateFloat(
+    val driftAnimated by transition.animateFloat(
         initialValue = -34f, targetValue = 34f,
         animationSpec = infiniteRepeatable(tween(8500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "drift"
     )
-    val pulse by transition.animateFloat(
+    val drift = if (motion) driftAnimated else 0f
+    val pulseAnimated by transition.animateFloat(
         initialValue = .18f, targetValue = .42f,
         animationSpec = infiniteRepeatable(tween(7200), RepeatMode.Reverse),
         label = "pulse"
     )
-    val water by transition.animateFloat(
+    val pulse = if (motion) pulseAnimated else .22f
+    val waterAnimated by transition.animateFloat(
         initialValue = -22f, targetValue = 22f,
         animationSpec = infiniteRepeatable(tween(11000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "water-drift"
     )
+    val water = if (motion) waterAnimated else 0f
     Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(palette.darkBg, palette.darkSurface, palette.primary.copy(alpha = .78f))) else Brush.verticalGradient(listOf(palette.lightBg, Color(0xFFE7F0EB), Color(0xFFFFFCF5))))) {
         Box(Modifier.offset(x = drift.dp, y = 90.dp).size(230.dp).align(Alignment.TopEnd).blur(62.dp)
             .background((if (dark) Emerald else Color(0xFF72B6A0)).copy(alpha = pulse), CircleShape))
@@ -551,13 +560,14 @@ private fun QuickTile(title: String, subtitle: String, icon: ImageVector, accent
 
 @Composable
 private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    val motion = LocalMotionEnabled.current
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(35)
+        if (motion) delay(55)
         entered = true
     }
-    val fall by animateFloatAsState(targetValue = if (entered) 0f else -34f, animationSpec = spring(dampingRatio = .68f, stiffness = 170f), label = "glass-card-fall")
-    val reveal by animateFloatAsState(targetValue = if (entered) 1f else .94f, animationSpec = spring(dampingRatio = .68f, stiffness = 170f), label = "glass-card-scale")
+    val fall by animateFloatAsState(targetValue = if (entered) 0f else if (motion) -34f else 0f, animationSpec = if (motion) spring(dampingRatio = .68f, stiffness = 170f) else tween(160), label = "glass-card-fall")
+    val reveal by animateFloatAsState(targetValue = if (entered) 1f else if (motion) .94f else 1f, animationSpec = if (motion) spring(dampingRatio = .68f, stiffness = 170f) else tween(160), label = "glass-card-scale")
     val fill = if (dark) listOf(Color.White.copy(alpha = .15f), Color.White.copy(alpha = .055f))
         else listOf(Color.White.copy(alpha = .86f), Color(0xFFF7F1E5).copy(alpha = .72f))
     val line = if (dark) Color.White.copy(alpha = .2f) else Color.White.copy(alpha = .9f)
@@ -567,7 +577,7 @@ private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.()
             scaleX = reveal
             scaleY = reveal
             alpha = if (entered) 1f else .55f
-        }.shadow(16.dp, RoundedCornerShape(28.dp), clip = false)
+        }.shadow(if (motion) 16.dp else 0.dp, RoundedCornerShape(28.dp), clip = false)
             .clip(RoundedCornerShape(28.dp))
             .background(Brush.verticalGradient(listOf(fill.first(), fill.last(), fill.first().copy(alpha = .08f))))
             .border(1.dp, line, RoundedCornerShape(28.dp))
