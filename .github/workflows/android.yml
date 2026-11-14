@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_BASE64: \${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,58 +30,36 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
       - name: Prepare release signing key
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: \${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          # Accept either the raw Base64 value or a copied KEY=value line.
+          # Accept raw Base64 or a copied KEY=value line.
           KEY_DATA="$(printf "%s" "$ANDROID_KEYSTORE_BASE64" | sed -E '1s/^[A-Z0-9_]+=//' | tr -d '[:space:]')"
           if [ -z "$KEY_DATA" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is empty. Re-enter the Base64 value from signing-secrets.txt."
+            echo "::error::ANDROID_KEYSTORE_BASE64 is empty."
             exit 1
           fi
-          if ! printf "%s" "$KEY_DATA" | grep -Eq '^[A-Za-z0-9+/]+={0,2}
-      - name: Build signed release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_PATH: release-key.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle assembleRelease
-      - name: Upload signed release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: mawaqeet-release-1.0.1
-          path: app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: mawaqeet-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 contains characters outside Base64. Copy only the value, without quotes or the variable name."
+          if ! printf "%s" "$KEY_DATA" | grep -Eq "^[A-Za-z0-9+/]+=*$"; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid Base64. Copy only its value from signing-secrets.txt."
             exit 1
           fi
           printf "%s" "$KEY_DATA" | base64 --decode > release-key.jks
           if [ ! -s release-key.jks ]; then
-            echo "::error::The decoded signing file is empty."
+            echo "::error::Decoded signing file is empty."
             exit 1
           fi
           keytool -list -keystore release-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD"
       - name: Build signed release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: \${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_PATH: release-key.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: \${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: \${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: \${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease
       - name: Upload signed release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: \${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: mawaqeet-release-1.0.1
