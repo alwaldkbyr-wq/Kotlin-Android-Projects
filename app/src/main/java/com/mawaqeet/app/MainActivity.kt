@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
@@ -54,11 +55,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,19 +100,21 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
 @Composable
 fun MawaqeetApp() {
     val context = LocalContext.current
-    var darkMode by remember { mutableStateOf(true) }
-    var motionEnabled by remember { mutableStateOf(true) }
+    val preferences = remember { context.getSharedPreferences("mawaqeet_preferences", Context.MODE_PRIVATE) }
+    var darkMode by remember { mutableStateOf(preferences.getBoolean("dark_mode", true)) }
+    var motionEnabled by remember { mutableStateOf(preferences.getBoolean("motion_enabled", true)) }
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
-    var latitude by remember { mutableStateOf<Double?>(null) }
-    var longitude by remember { mutableStateOf<Double?>(null) }
-    var locationMessage by remember { mutableStateOf("لم يُحدّد الموقع بعد") }
+    var latitude by remember { mutableStateOf(preferences.getString("latitude", null)?.toDoubleOrNull()) }
+    var longitude by remember { mutableStateOf(preferences.getString("longitude", null)?.toDoubleOrNull()) }
+    var locationMessage by remember { mutableStateOf(if (preferences.contains("latitude")) "تم حفظ موقعك على هذا الجهاز" else "سيُطلب إذن الموقع عند أول تشغيل فقط") }
     var locationListener by remember { mutableStateOf<LocationListener?>(null) }
     val manager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
 
     fun acceptLocation(location: Location) {
         latitude = location.latitude
         longitude = location.longitude
-        locationMessage = "تم تحديد موقعك"
+        locationMessage = "تم حفظ موقعك على هذا الجهاز"
+        preferences.edit().putString("latitude", location.latitude.toString()).putString("longitude", location.longitude.toString()).putLong("location_saved_at", System.currentTimeMillis()).apply()
         locationListener?.let { manager.removeUpdates(it) }
         locationListener = null
     }
@@ -162,6 +167,17 @@ fun MawaqeetApp() {
         else locationMessage = "لم تمنح إذن الموقع. يمكنك تفعيله من إعدادات التطبيق."
     }
 
+    LaunchedEffect(Unit) {
+        if (latitude == null && !preferences.getBoolean("location_permission_prompted", false)) {
+            preferences.edit().putBoolean("location_permission_prompted", true).apply()
+            permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        } else if (latitude == null &&
+            (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+            locate()
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose { locationListener?.let { manager.removeUpdates(it) } }
     }
@@ -189,19 +205,37 @@ fun MawaqeetApp() {
         Scaffold(
             containerColor = background,
             bottomBar = {
-                NavigationBar(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).clip(RoundedCornerShape(28.dp)).border(1.dp, Gold.copy(alpha = .28f), RoundedCornerShape(28.dp)), containerColor = if (darkMode) Color(0xDD102B40) else Color(0xEFFFFFFF), tonalElevation = 0.dp) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+                        .shadow(if (motionEnabled) 18.dp else 0.dp, RoundedCornerShape(30.dp))
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(Brush.verticalGradient(if (darkMode) listOf(Color(0xDD24485A), Color(0xCC102B40)) else listOf(Color(0xF7FFFFFF), Color(0xDDF5F0E6))))
+                        .border(1.dp, Color.White.copy(alpha = if (motionEnabled) .48f else .18f), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 5.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     AppTab.values().forEach { tab ->
-                        NavigationBarItem(
-                            selected = selectedTab == tab,
-                            onClick = { selectedTab = tab },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label, fontSize = 10.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = accent,
-                                selectedTextColor = accent,
-                                indicatorColor = if (darkMode) Emerald.copy(alpha = .22f) else Emerald.copy(alpha = .12f)
-                            )
-                        )
+                        val selected = selectedTab == tab
+                        val pill by animateFloatAsState(if (selected) 1f else 0f, animationSpec = if (motionEnabled) spring(dampingRatio = .6f, stiffness = 320f) else tween(160), label = "nav-pill")
+                        val iconLift by animateFloatAsState(if (selected) -3f else 0f, animationSpec = if (motionEnabled) spring(dampingRatio = .5f, stiffness = 400f) else tween(160), label = "nav-icon")
+                        Column(
+                            Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).clickable { selectedTab = tab }.padding(horizontal = 2.dp, vertical = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (selected) {
+                                    Box(Modifier.fillMaxWidth(.82f).height(34.dp).graphicsLayer { scaleX = .92f + pill * .08f; scaleY = .88f + pill * .12f }
+                                        .clip(RoundedCornerShape(20.dp)).background(Emerald.copy(alpha = if (darkMode) .38f else .14f))
+                                        .border(1.dp, Gold.copy(alpha = .32f), RoundedCornerShape(20.dp)))
+                                    Text("⌒", color = accent, fontSize = 24.sp, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-15).dp))
+                                }
+                                Icon(tab.icon, contentDescription = tab.label, tint = if (selected) accent else muted,
+                                    modifier = Modifier.offset(y = iconLift.dp).size(21.dp))
+                            }
+                            Text(tab.label, color = if (selected) accent else muted, fontSize = 9.sp, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -212,8 +246,8 @@ fun MawaqeetApp() {
                     targetState = selectedTab,
                     transitionSpec = {
                         if (!motionEnabled) androidx.compose.animation.fadeIn(tween(160)) togetherWith androidx.compose.animation.fadeOut(tween(160))
-                        else (slideInHorizontally(initialOffsetX = { full -> full / 5 }, animationSpec = spring(dampingRatio = .82f, stiffness = 420f)) + scaleIn(initialScale = .92f, animationSpec = tween(380))) togetherWith
-                            (slideOutHorizontally(targetOffsetX = { full -> -full / 8 }, animationSpec = tween(280)) + scaleOut(targetScale = .97f, animationSpec = tween(280)))
+                        else (slideInHorizontally(initialOffsetX = { full -> full / 3 }, animationSpec = spring(dampingRatio = .8f, stiffness = 180f)) + scaleIn(initialScale = .92f, animationSpec = tween(380, delayMillis = 60))) togetherWith
+                            (slideOutHorizontally(targetOffsetX = { full -> -full / 5 }, animationSpec = tween(380)) + scaleOut(targetScale = .94f, animationSpec = tween(380)) + androidx.compose.animation.fadeOut(tween(260)))
                     },
                     label = "page-transition"
                 ) { tab ->
@@ -225,8 +259,9 @@ fun MawaqeetApp() {
                         item {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("مَوَاقِيت", color = foreground, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                                    Text("۞  مَوَاقِيت", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
                                     Text("بين هدي السماء ودقّة الفلك", color = accent, fontSize = 12.sp)
+                                    Text("━━━━ ◆ ۞ ◆ ━━━━", color = accent.copy(alpha = .72f), fontSize = 10.sp)
                                 }
                                 Box(Modifier.size(46.dp).clip(CircleShape).background(if (darkMode) Color.White.copy(.09f) else Emerald.copy(.09f)),
                                     contentAlignment = Alignment.Center) {
@@ -268,15 +303,22 @@ private fun AmbientBackdrop(dark: Boolean) {
         label = "drift"
     )
     val pulse by transition.animateFloat(
-        initialValue = .22f, targetValue = .48f,
-        animationSpec = infiniteRepeatable(tween(6200), RepeatMode.Reverse),
+        initialValue = .18f, targetValue = .42f,
+        animationSpec = infiniteRepeatable(tween(7200), RepeatMode.Reverse),
         label = "pulse"
+    )
+    val water by transition.animateFloat(
+        initialValue = -22f, targetValue = 22f,
+        animationSpec = infiniteRepeatable(tween(11000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "water-drift"
     )
     Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(Night, Navy, Color(0xFF1F5F66))) else Brush.verticalGradient(listOf(LightBg, Color(0xFFE7F0EB), Color(0xFFFFFCF5))))) {
         Box(Modifier.offset(x = drift.dp, y = 90.dp).size(230.dp).align(Alignment.TopEnd).blur(62.dp)
             .background((if (dark) Emerald else Color(0xFF72B6A0)).copy(alpha = pulse), CircleShape))
         Box(Modifier.offset(x = (-drift).dp, y = 390.dp).size(190.dp).align(Alignment.CenterStart).blur(58.dp)
             .background((if (dark) Color(0xFF315F8A) else Color(0xFFB8C9D9)).copy(alpha = pulse * .7f), CircleShape))
+        Box(Modifier.offset(x = water.dp, y = (-70).dp).size(175.dp).align(Alignment.BottomEnd).blur(64.dp)
+            .background((if (dark) Color(0xFFB8935A) else Color(0xFF1F5F66)).copy(alpha = pulse * .55f), CircleShape))
         if (dark) StarField()
     }
 }
@@ -293,7 +335,7 @@ private fun HomePage(
         Text(hijri, color = accent, fontSize = 25.sp, fontWeight = FontWeight.Bold)
         Text("التاريخ الهجري الحسابي • قد يختلف عن إعلان الرؤية الشرعية", color = muted, fontSize = 10.sp)
     }
-    GlassPanel(dark) {
+    if (lat == null || lon == null) GlassPanel(dark) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.LocationOn, contentDescription = null, tint = accent)
             Column(Modifier.weight(1f)) {
@@ -302,7 +344,7 @@ private fun HomePage(
             }
             TextButton(onClick = onLocate) { Text("تحديد", color = accent) }
         }
-        Text("إن تأخر GPS، جرّب الوقوف قرب نافذة أو في مكان مفتوح.", color = muted, fontSize = 10.sp)
+        Text("سيُحفظ موقعك على هذا الجهاز لاستخدامه تلقائياً في حساب مواقيت الأيام القادمة.", color = muted, fontSize = 10.sp)
         if (location.contains("متوقفة") || location.contains("فعّلها")) TextButton(onClick = onLocationSettings) { Text("فتح إعدادات الموقع", color = accent) }
     }
     SectionTitle("لوحتك السماوية", "ملخص يومك في لمحة", fg, muted)
@@ -460,9 +502,10 @@ private fun Metric(label: String, value: String, accent: Color, fg: Color, muted
 @Composable
 private fun QuickTile(title: String, subtitle: String, icon: ImageVector, accent: Color, fg: Color,
     modifier: Modifier, onClick: () -> Unit, dark: Boolean) {
-    val pressed by animateFloatAsState(1f, label = "tile")
-    Column(modifier.clip(RoundedCornerShape(22.dp)).background(if (dark) Color.White.copy(.08f) else Color.White.copy(.8f))
-        .border(1.dp, accent.copy(alpha = .22f), RoundedCornerShape(22.dp)).clickable { onClick() }.padding(14.dp)) {
+    Column(modifier.shadow(12.dp, RoundedCornerShape(24.dp), clip = false).clip(RoundedCornerShape(24.dp))
+        .background(Brush.verticalGradient(if (dark) listOf(Color.White.copy(.17f), Color.White.copy(.055f)) else listOf(Color.White.copy(.92f), Color.White.copy(.62f))))
+        .border(1.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(24.dp))
+        .clickable { onClick() }.padding(14.dp)) {
         Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(12.dp))
         Text(title, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -477,8 +520,8 @@ private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.()
         delay(35)
         entered = true
     }
-    val fall by animateFloatAsState(targetValue = if (entered) 0f else -24f, animationSpec = spring(dampingRatio = .62f, stiffness = 260f), label = "glass-card-fall")
-    val reveal by animateFloatAsState(targetValue = if (entered) 1f else .92f, animationSpec = spring(dampingRatio = .78f, stiffness = 300f), label = "glass-card-scale")
+    val fall by animateFloatAsState(targetValue = if (entered) 0f else -34f, animationSpec = spring(dampingRatio = .68f, stiffness = 170f), label = "glass-card-fall")
+    val reveal by animateFloatAsState(targetValue = if (entered) 1f else .94f, animationSpec = spring(dampingRatio = .68f, stiffness = 170f), label = "glass-card-scale")
     val fill = if (dark) listOf(Color.White.copy(alpha = .15f), Color.White.copy(alpha = .055f))
         else listOf(Color.White.copy(alpha = .86f), Color(0xFFF7F1E5).copy(alpha = .72f))
     val line = if (dark) Color.White.copy(alpha = .2f) else Color.White.copy(alpha = .9f)
@@ -488,8 +531,9 @@ private fun GlassPanel(dark: Boolean = true, content: @Composable ColumnScope.()
             scaleX = reveal
             scaleY = reveal
             alpha = if (entered) 1f else .55f
-        }.clip(RoundedCornerShape(28.dp))
-            .background(Brush.linearGradient(fill))
+        }.shadow(16.dp, RoundedCornerShape(28.dp), clip = false)
+            .clip(RoundedCornerShape(28.dp))
+            .background(Brush.verticalGradient(listOf(fill.first(), fill.last(), fill.first().copy(alpha = .08f))))
             .border(1.dp, line, RoundedCornerShape(28.dp))
             .padding(17.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
