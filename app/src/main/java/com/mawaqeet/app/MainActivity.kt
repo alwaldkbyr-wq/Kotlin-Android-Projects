@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -232,7 +233,21 @@ fun MawaqeetApp() {
         showSplash = false
     }
 
-    MaterialTheme(colorScheme = colors) {
+    MaterialTheme(
+        colorScheme = colors,
+        typography = androidx.compose.material3.Typography().let { base ->
+            base.copy(
+                bodyLarge = base.bodyLarge.copy(fontFamily = MawaqeetTextFont),
+                bodyMedium = base.bodyMedium.copy(fontFamily = MawaqeetTextFont),
+                bodySmall = base.bodySmall.copy(fontFamily = MawaqeetTextFont),
+                titleLarge = base.titleLarge.copy(fontFamily = MawaqeetDisplayFont),
+                titleMedium = base.titleMedium.copy(fontFamily = MawaqeetDisplayFont),
+                headlineLarge = base.headlineLarge.copy(fontFamily = MawaqeetDisplayFont),
+                headlineMedium = base.headlineMedium.copy(fontFamily = MawaqeetDisplayFont),
+                headlineSmall = base.headlineSmall.copy(fontFamily = MawaqeetDisplayFont)
+            )
+        }
+    ) {
       CompositionLocalProvider(LocalMotionEnabled provides motionEnabled) {
         val splashOffset by animateFloatAsState(
             targetValue = if (showSplash) 0f else -1f,
@@ -300,7 +315,7 @@ fun MawaqeetApp() {
                         item {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("۞  مَوَاقِيت", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
+                                    Text("۞  مَوَاقِيت", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.Bold, fontFamily = MawaqeetDisplayFont)
                                     Text("بين هدي السماء ودقّة الفلك", color = accent, fontSize = 12.sp)
                                     Text("━━━━ ◆ ۞ ◆ ━━━━", color = accent.copy(alpha = .72f), fontSize = 10.sp)
                                 }
