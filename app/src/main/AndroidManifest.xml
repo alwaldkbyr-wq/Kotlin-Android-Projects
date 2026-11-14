@@ -5,6 +5,8 @@
     <application
         android:allowBackup="true"
         android:label="مواقيت"
+        android:icon="@drawable/mawaqeet_logo"
+        android:roundIcon="@drawable/mawaqeet_logo"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
