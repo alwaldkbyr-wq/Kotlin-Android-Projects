@@ -372,7 +372,7 @@ private fun MoonPage(moon: MoonInfo, accent: Color, fg: Color, muted: Color, dar
 @Composable
 private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color, dark: Boolean) {
     PageHeading("مرصد السماء", "الشمس والنهار ومعلومات الرصد", accent, fg)
-    GlassPanel() {
+    GlassPanel(dark) {
         Text("الشمس والنهار", color = accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         if (times == null) Text("حدّد موقعك من صفحة الرئيسية لعرض بيانات الشمس.", color = muted)
         else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -381,7 +381,7 @@ private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color,
             Metric("طول النهار", times.dayLength, accent, fg, muted)
         }
     }
-    GlassPanel() {
+    GlassPanel(dark) {
         Text("خريطة الرصد", color = accent, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         Text("ستُضاف في مراحل لاحقة مواقع النجوم والكواكب، والارتفاع والسمت، ومسارات الأجرام خلال الليل.", color = muted, fontSize = 12.sp, lineHeight = 19.sp)
         Text("لا تتطلب الحسابات الفلكية الأساسية اتصالاً بالإنترنت عند اكتمال وحدتها المحلية.", color = muted, fontSize = 11.sp)
