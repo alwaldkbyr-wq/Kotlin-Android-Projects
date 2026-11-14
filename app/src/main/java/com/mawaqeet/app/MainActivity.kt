@@ -33,6 +33,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,6 +62,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -321,7 +324,7 @@ fun MawaqeetApp() {
                                 }
                                 Box(Modifier.size(46.dp).clip(CircleShape).background(if (darkMode) Color.White.copy(.09f) else Emerald.copy(.09f)),
                                     contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.NightsStay, contentDescription = null, tint = accent, modifier = Modifier.size(25.dp))
+                                    Image(painter = painterResource(id = R.drawable.mawaqeet_logo), contentDescription = "شعار مواقيت", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                                 }
                             }
                         }
