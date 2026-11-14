@@ -80,3 +80,5 @@ jobs:
           name: mawaqeet-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+# Trigger a fresh release build after signing-key parsing fix.
