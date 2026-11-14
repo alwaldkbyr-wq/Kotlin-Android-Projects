@@ -80,7 +80,22 @@ private val Gold = Color(0xFFB8935A)
 private val Navy = Color(0xFF1C3157)
 private val LightBg = Color(0xFFF4F0E6)
 private val LightSurface = Color(0xFFFFFCF5)
-private val Ink = Color(0xFF1C3157)
+private val Ink = Color(0xFF1B2A4A)
+
+private data class ThemePalette(
+    val name: String, val primary: Color, val accent: Color,
+    val lightBg: Color, val darkBg: Color, val darkSurface: Color,
+    val textDark: Color = Color(0xFF1B2A4A), val textLight: Color = Color(0xFFF5F2EA)
+)
+private val ThemePalettes = listOf(
+    ThemePalette("أخضر وعاجي", Color(0xFF164B3B), Color(0xFFB8935A), Color(0xFFF5F0E6), Color(0xFF102B26), Color(0xFF1C4037)),
+    ThemePalette("كحلي وذهبي", Color(0xFF172554), Color(0xFFD6AD60), Color(0xFFF4F0E6), Color(0xFF101A35), Color(0xFF202E52)),
+    ThemePalette("تركوازي وأبيض", Color(0xFF087F70), Color(0xFF1ABC9C), Color(0xFFFFFFFF), Color(0xFF082D2B), Color(0xFF10423E)),
+    ThemePalette("بترولي ورملي", Color(0xFF155E63), Color(0xFFE8DCC5), Color(0xFFE8DCC5), Color(0xFF103B3E), Color(0xFF1A4B4D)),
+    ThemePalette("بنفسجي وفضي", Color(0xFF493568), Color(0xFFD9D9E2), Color(0xFFF0EFF5), Color(0xFF241A36), Color(0xFF38294E)),
+    ThemePalette("أسود وذهبي", Color(0xFF222222), Color(0xFFC5A059), Color(0xFFF5F1E8), Color(0xFF171717), Color(0xFF2B2B2B)),
+    ThemePalette("زيتوني وبيج", Color(0xFF606C38), Color(0xFFF0E8D5), Color(0xFFF0E8D5), Color(0xFF2D3420), Color(0xFF424B2B))
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,6 +118,8 @@ fun MawaqeetApp() {
     val preferences = remember { context.getSharedPreferences("mawaqeet_preferences", Context.MODE_PRIVATE) }
     var darkMode by remember { mutableStateOf(preferences.getBoolean("dark_mode", true)) }
     var motionEnabled by remember { mutableStateOf(preferences.getBoolean("motion_enabled", true)) }
+    var themeIndex by remember { mutableIntStateOf(preferences.getInt("theme_index", 0).coerceIn(0, ThemePalettes.lastIndex)) }
+    val palette = ThemePalettes[themeIndex]
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
     var latitude by remember { mutableStateOf(preferences.getString("latitude", null)?.toDoubleOrNull()) }
     var longitude by remember { mutableStateOf(preferences.getString("longitude", null)?.toDoubleOrNull()) }
@@ -190,18 +207,18 @@ fun MawaqeetApp() {
         PrayerCalculator.calculate(today, latitude!!, longitude!!, offset) else null
 
     val colors = if (darkMode) darkColorScheme(
-        primary = Emerald, secondary = Gold, background = Night, surface = DeepBlue,
-        onBackground = Color(0xFFEAF2F0), onSurface = Color(0xFFEAF2F0)
+        primary = palette.primary, secondary = palette.accent, background = palette.darkBg, surface = palette.darkSurface,
+        onBackground = palette.textLight, onSurface = palette.textLight
     ) else lightColorScheme(
-        primary = Emerald, secondary = Gold, background = LightBg,
-        surface = LightSurface, onBackground = Ink, onSurface = Ink
+        primary = palette.primary, secondary = palette.accent, background = palette.lightBg,
+        surface = LightSurface, onBackground = palette.textDark, onSurface = palette.textDark
     )
 
     MaterialTheme(colorScheme = colors) {
-        val foreground = if (darkMode) Color(0xFFEAF2F0) else Ink
-        val muted = if (darkMode) Color(0xFFB9C9CE) else Color(0xFF647985)
-        val accent = if (darkMode) Gold else Color(0xFF946C25)
-        val background = if (darkMode) Night else LightBg
+        val foreground = if (darkMode) palette.textLight else palette.textDark
+        val muted = if (darkMode) Color(0xFFC2D0CE) else Color(0xFF52636A)
+        val accent = palette.accent
+        val background = if (darkMode) palette.darkBg else palette.lightBg
         Scaffold(
             containerColor = background,
             bottomBar = {
@@ -241,7 +258,7 @@ fun MawaqeetApp() {
             }
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
-                AmbientBackdrop(darkMode)
+                AmbientBackdrop(darkMode, palette)
                 AnimatedContent(
                     targetState = selectedTab,
                     transitionSpec = {
@@ -283,7 +300,7 @@ fun MawaqeetApp() {
                                 item { SkyPage(times, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SETTINGS -> {
-                                item { SettingsPage(darkMode, { darkMode = it }, motionEnabled, { motionEnabled = it }, locationMessage, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { SettingsPage(darkMode, { darkMode = it; preferences.edit().putBoolean("dark_mode", it).apply() }, motionEnabled, { motionEnabled = it; preferences.edit().putBoolean("motion_enabled", it).apply() }, locationMessage, themeIndex, { themeIndex = it; preferences.edit().putInt("theme_index", it).apply() }, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                         }
                         item { Text("مواقيت • إصدار 1.0.1", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
@@ -295,7 +312,7 @@ fun MawaqeetApp() {
 }
 
 @Composable
-private fun AmbientBackdrop(dark: Boolean) {
+private fun AmbientBackdrop(dark: Boolean, palette: ThemePalette) {
     val transition = rememberInfiniteTransition(label = "ambient")
     val drift by transition.animateFloat(
         initialValue = -34f, targetValue = 34f,
@@ -312,7 +329,7 @@ private fun AmbientBackdrop(dark: Boolean) {
         animationSpec = infiniteRepeatable(tween(11000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "water-drift"
     )
-    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(Night, Navy, Color(0xFF1F5F66))) else Brush.verticalGradient(listOf(LightBg, Color(0xFFE7F0EB), Color(0xFFFFFCF5))))) {
+    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(palette.darkBg, palette.darkSurface, palette.primary.copy(alpha = .78f))) else Brush.verticalGradient(listOf(palette.lightBg, Color(0xFFE7F0EB), Color(0xFFFFFCF5))))) {
         Box(Modifier.offset(x = drift.dp, y = 90.dp).size(230.dp).align(Alignment.TopEnd).blur(62.dp)
             .background((if (dark) Emerald else Color(0xFF72B6A0)).copy(alpha = pulse), CircleShape))
         Box(Modifier.offset(x = (-drift).dp, y = 390.dp).size(190.dp).align(Alignment.CenterStart).blur(58.dp)
@@ -444,7 +461,7 @@ private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color,
 }
 
 @Composable
-private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, accent: Color, fg: Color, muted: Color,
+private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, themeIndex: Int, onThemeChange: (Int) -> Unit, accent: Color, fg: Color, muted: Color,
     onLocate: () -> Unit, onSettings: () -> Unit) {
     PageHeading("الإعدادات", "اجعل مواقيت أقرب إلى طريقتك", accent, fg)
     GlassPanel(dark) {
@@ -459,6 +476,25 @@ private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion:
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = !dark, onClick = { onDarkChange(false) }, label = { Text("فاتح") })
             FilterChip(selected = dark, onClick = { onDarkChange(true) }, label = { Text("داكن") })
+        }
+    }
+    GlassPanel(dark) {
+        Text("الثيمات", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("اختر الهوية اللونية التي تفضلها", color = muted, fontSize = 11.sp)
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            ThemePalettes.chunked(2).forEachIndexed { rowIndex, rowThemes ->
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    rowThemes.forEachIndexed { columnIndex, theme ->
+                        val index = rowIndex * 2 + columnIndex
+                        FilterChip(
+                            selected = themeIndex == index,
+                            onClick = { onThemeChange(index) },
+                            label = { Text(theme.name, fontSize = 10.sp) },
+                            leadingIcon = { Box(Modifier.size(12.dp).clip(CircleShape).background(theme.primary).border(1.dp, theme.accent, CircleShape)) }
+                        )
+                    }
+                }
+            }
         }
     }
     GlassPanel(dark) {
