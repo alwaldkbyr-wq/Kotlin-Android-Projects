@@ -126,6 +126,7 @@ fun MawaqeetApp() {
     var themeIndex by remember { mutableIntStateOf(preferences.getInt("theme_index", 0).coerceIn(0, ThemePalettes.lastIndex)) }
     val palette = ThemePalettes[themeIndex]
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
+    var showSplash by remember { mutableStateOf(true) }
     var latitude by remember { mutableStateOf(preferences.getString("latitude", null)?.toDoubleOrNull()) }
     var longitude by remember { mutableStateOf(preferences.getString("longitude", null)?.toDoubleOrNull()) }
     var locationMessage by remember { mutableStateOf(if (preferences.contains("latitude")) "تم حفظ موقعك على هذا الجهاز" else "سيُطلب إذن الموقع عند أول تشغيل فقط") }
@@ -219,8 +220,18 @@ fun MawaqeetApp() {
         surface = LightSurface, onBackground = palette.textDark, onSurface = palette.textDark
     )
 
+    LaunchedEffect(Unit) {
+        delay(350)
+        showSplash = false
+    }
+
     MaterialTheme(colorScheme = colors) {
       CompositionLocalProvider(LocalMotionEnabled provides motionEnabled) {
+        val splashOffset by animateFloatAsState(
+            targetValue = if (showSplash) 0f else -1f,
+            animationSpec = tween(if (motionEnabled) 550 else 160),
+            label = "basmala-splash"
+        )
         val foreground = if (darkMode) palette.textLight else palette.textDark
         val muted = if (darkMode) Color(0xFFC2D0CE) else Color(0xFF52636A)
         val accent = if (darkMode) palette.accent else palette.primary
@@ -310,6 +321,19 @@ fun MawaqeetApp() {
                             }
                         }
                         item { Text("مواقيت • إصدار 1.0.1", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+                    }
+                }
+                if (showSplash || splashOffset > -0.99f) {
+                    Box(
+                        Modifier.fillMaxSize().graphicsLayer { translationY = splashOffset * size.height }
+                            .background(if (darkMode) palette.darkBg else palette.lightBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text("۞", color = palette.accent, fontSize = 58.sp)
+                            Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", color = foreground, fontSize = 23.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
+                            Text("مَوَاقِيت", color = accent, fontSize = 15.sp, letterSpacing = 5.sp)
+                        }
                     }
                 }
             }
