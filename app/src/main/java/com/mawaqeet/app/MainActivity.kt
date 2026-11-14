@@ -128,6 +128,8 @@ fun MawaqeetApp() {
     var darkMode by remember { mutableStateOf(preferences.getBoolean("dark_mode", true)) }
     var motionEnabled by remember { mutableStateOf(preferences.getBoolean("motion_enabled", true)) }
     var themeIndex by remember { mutableIntStateOf(preferences.getInt("theme_index", 0).coerceIn(0, ThemePalettes.lastIndex)) }
+    var prayerMethodIndex by remember { mutableIntStateOf(preferences.getInt("prayer_method", 0).coerceIn(0, PrayerMethod.values().lastIndex)) }
+    var hanafiAsr by remember { mutableStateOf(preferences.getBoolean("hanafi_asr", false)) }
     val palette = ThemePalettes[themeIndex]
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
     var showSplash by remember { mutableStateOf(true) }
@@ -221,7 +223,7 @@ fun MawaqeetApp() {
     val moon = remember(today) { MoonInfo.forDate(today) }
     val offset = ZoneId.systemDefault().rules.getOffset(java.time.Instant.now()).totalSeconds / 3600.0
     val times = if (latitude != null && longitude != null)
-        PrayerCalculator.calculate(today, latitude!!, longitude!!, offset) else null
+        PrayerCalculator.calculate(today, latitude!!, longitude!!, offset, PrayerMethod.values()[prayerMethodIndex], hanafiAsr) else null
 
     val colors = if (darkMode) darkColorScheme(
         primary = palette.primary, secondary = palette.accent, background = palette.darkBg, surface = palette.darkSurface,
@@ -342,10 +344,10 @@ fun MawaqeetApp() {
                                 item { SkyPage(times, accent, foreground, muted, darkMode) }
                             }
                             AppTab.SETTINGS -> {
-                                item { SettingsPage(darkMode, { darkMode = it; preferences.edit().putBoolean("dark_mode", it).apply() }, motionEnabled, { motionEnabled = it; preferences.edit().putBoolean("motion_enabled", it).apply() }, locationMessage, themeIndex, { themeIndex = it; preferences.edit().putInt("theme_index", it).apply() }, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
+                                item { SettingsPage(darkMode, { darkMode = it; preferences.edit().putBoolean("dark_mode", it).apply() }, motionEnabled, { motionEnabled = it; preferences.edit().putBoolean("motion_enabled", it).apply() }, locationMessage, themeIndex, { themeIndex = it; preferences.edit().putInt("theme_index", it).apply() }, prayerMethodIndex, { prayerMethodIndex = it; preferences.edit().putInt("prayer_method", it).apply() }, hanafiAsr, { hanafiAsr = it; preferences.edit().putBoolean("hanafi_asr", it).apply() }, accent, foreground, muted, { if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate() else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }, { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) }
                             }
                         }
-                        item { Text("مواقيت • إصدار 1.0.1", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+                        item { Text("مواقيت • إصدار 1.0.3", color = muted.copy(alpha = .65f), fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     }
                 }
                 if (showSplash || splashOffset > -0.99f) {
@@ -468,7 +470,7 @@ private fun PrayerPage(today: LocalDate, hijri: String, times: PrayerTimes?, loc
             PrayerRow("المغرب", times.maghrib, fg, accent)
             PrayerRow("العشاء", times.isha, fg, accent)
             HorizontalDivider(color = accent.copy(alpha = .25f))
-            Text("تُستخدم حالياً زاوية فجر 18° وعشاء 17°، والعصر على المذهب القياسي. قد تختلف النتائج عن تقويم بلدك.", color = muted, fontSize = 11.sp, lineHeight = 17.sp)
+            Text("تُستخدم طريقة الحساب والمذهب المحددان في الإعدادات. قد تختلف النتائج عن تقويم الجهات الرسمية.", color = muted, fontSize = 11.sp, lineHeight = 17.sp)
         }
     }
     GlassPanel(dark) {
@@ -522,7 +524,9 @@ private fun SkyPage(times: PrayerTimes?, accent: Color, fg: Color, muted: Color,
 
 @Composable
 private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion: Boolean, onMotionChange: (Boolean) -> Unit, location: String, themeIndex: Int, onThemeChange: (Int) -> Unit, accent: Color, fg: Color, muted: Color,
-    onLocate: () -> Unit, onSettings: () -> Unit) {
+    prayerMethodIndex: Int, onPrayerMethodChange: (Int) -> Unit, hanafiAsr: Boolean, onHanafiAsrChange: (Boolean) -> Unit,
+    accent: Color, fg: Color, muted: Color, onLocate: () -> Unit, onSettings: () -> Unit) {
+    var methodExpanded by remember { mutableStateOf(false) }
     PageHeading("الإعدادات", "اجعل مواقيت أقرب إلى طريقتك", accent, fg)
     GlassPanel(dark) {
         Text("المظهر", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -558,6 +562,31 @@ private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion:
         }
     }
     GlassPanel(dark) {
+        Text("حساب مواقيت الصلاة", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("اختر طريقة الحساب الأقرب إلى تقويم بلدك", color = muted, fontSize = 11.sp)
+        Box {
+            OutlinedButton(onClick = { methodExpanded = true }) {
+                Text(PrayerMethod.values()[prayerMethodIndex].title)
+            }
+            DropdownMenu(expanded = methodExpanded, onDismissRequest = { methodExpanded = false }) {
+                PrayerMethod.values().forEachIndexed { index, method ->
+                    DropdownMenuItem(text = { Text(method.title) }, onClick = {
+                        onPrayerMethodChange(index)
+                        methodExpanded = false
+                    })
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("العصر على المذهب الحنفي", color = fg, fontWeight = FontWeight.SemiBold)
+                Text("استخدم ظلّ المثلين بدلاً من ظلّ المثل", color = muted, fontSize = 11.sp)
+            }
+            Switch(checked = hanafiAsr, onCheckedChange = onHanafiAsrChange)
+        }
+        Text("قد تختلف النتائج عن التوقيت الرسمي بسبب إعدادات الجهات المحلية وخطوط العرض؛ راجع تقويم بلدك.", color = muted, fontSize = 11.sp, lineHeight = 17.sp)
+    }
+    GlassPanel(dark) {
         Text("الحركة", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -575,7 +604,7 @@ private fun SettingsPage(dark: Boolean, onDarkChange: (Boolean) -> Unit, motion:
     }
     GlassPanel(dark) {
         Text("عن التطبيق", color = accent, fontWeight = FontWeight.Bold)
-        Text("مواقيت 1.0.0 • نسخة تطويرية. بعض الحسابات والمؤشرات ما زالت تقريبية وقيد التطوير.", color = muted, fontSize = 12.sp, lineHeight = 18.sp)
+        Text("مواقيت 1.0.3 • بعض المؤشرات الفلكية ما زالت تقريبية وقيد التطوير.", color = muted, fontSize = 12.sp, lineHeight = 18.sp)
     }
 }
 
