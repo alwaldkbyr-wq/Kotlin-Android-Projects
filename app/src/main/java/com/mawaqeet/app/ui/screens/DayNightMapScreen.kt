@@ -1,5 +1,6 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.foundation.layout.widthIn
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Paint
@@ -132,7 +133,7 @@ fun DayNightMapScreen() {
             }
 
             Column(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp)
+                Modifier.align(Alignment.BottomCenter).widthIn(max = 720.dp).fillMaxWidth().navigationBarsPadding().padding(12.dp)
                     .glass(RoundedCornerShape(26.dp)).padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

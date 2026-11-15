@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ fun MapSheet(
         val h by animateDpAsState(target, label = "sheet")
         Box(Modifier.fillMaxSize(), content = mapContent)
         Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(h)
+            Modifier.align(Alignment.BottomCenter).widthIn(max = 720.dp).fillMaxWidth().height(h)
                 .glass(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
         ) {
             LazyColumn(

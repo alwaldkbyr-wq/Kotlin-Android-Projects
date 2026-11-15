@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,7 +63,8 @@ fun SkyDial(
     val night = Color(0xFF2B2F7A)
     val dayCol = Color(0xFFFFC46B)
     val twilight = Color(0xFF7C6BD6)
-    Box(modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
+    // قطر القرص محدود حتى لا يملأ شاشة التابلت كلها
+    Box(modifier.fillMaxWidth().wrapContentWidth().widthIn(max = 440.dp).fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize().padding(6.dp)) {
             val dp = density
             val c = center

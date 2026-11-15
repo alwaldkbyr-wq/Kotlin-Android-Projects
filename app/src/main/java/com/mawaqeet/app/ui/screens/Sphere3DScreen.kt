@@ -1,5 +1,6 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -659,7 +660,7 @@ fun Sphere3DScreen() {
                 if (follow && !sensorOk) Text("مستشعر الاتجاه غير متاح على هذا الجهاز", color = o.danger, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
             }
 
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding()) {
+            Column(Modifier.align(Alignment.BottomCenter).widthIn(max = 720.dp).fillMaxWidth().navigationBarsPadding()) {
             if (pickedBody != null || pickedStar != null) {
                 SkyObjectCard(pickedBody, pickedStar, nowState.value + timeOffsetMs, onClose = { pickedBody = null; pickedStar = null })
             }

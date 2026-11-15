@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -215,8 +216,8 @@ private fun LiquidBottomBar(tabs: List<Tab>, current: String, onSelect: (String)
     val sel = tabs.indexOfFirst { it.route == current }.coerceAtLeast(0)
     val barShape = RoundedCornerShape(30.dp)
     val lensShape = RoundedCornerShape(28.dp)
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().glass(barShape).padding(5.dp)) {
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.widthIn(max = 560.dp).fillMaxWidth().glass(barShape).padding(5.dp)) {
             val w = maxWidth / tabs.size.coerceAtLeast(1)
             val x by animateDpAsState(w * sel, if (motion) spring(dampingRatio = 0.6f, stiffness = 320f) else snap(), label = "lens")
             val squish = remember { Animatable(1f) }

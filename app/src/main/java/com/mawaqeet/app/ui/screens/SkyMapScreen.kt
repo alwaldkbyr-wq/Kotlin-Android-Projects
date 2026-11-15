@@ -1,5 +1,6 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.foundation.layout.widthIn
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -434,7 +435,7 @@ fun SkyMapScreen() {
                 }
             }
 
-            if (!full) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding()) {
+            if (!full) Column(Modifier.align(Alignment.BottomCenter).widthIn(max = 720.dp).fillMaxWidth().navigationBarsPadding()) {
                 picked?.let { pk -> SkyObjectCard(pk.body, if (pk.body == null) StarCatalog.stars[pk.star] else null, frame.millis, onClose = { picked = null }) }
                 Column(
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp).fillMaxWidth()

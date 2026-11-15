@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
@@ -273,12 +274,18 @@ fun <T> rememberComputed(vararg keys: Any?, compute: suspend () -> T): T? {
 /** قائمة الشاشة القياسية: تمرير عمودي مع مسافة سفلية لشريط التنقل */
 @Composable
 fun ScreenList(modifier: Modifier = Modifier, content: LazyListScope.() -> Unit) {
-    LazyColumn(
-        modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 6.dp, bottom = 120.dp),
-        content = content
-    )
+    // على الشاشات الكبيرة (التابلت والوضع الأفقي) يبقى المحتوى عموداً متوسطاً بعرض مريح للقراءة
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            modifier.fillMaxSize().widthIn(max = MaxContentWidth),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 120.dp),
+            content = content
+        )
+    }
 }
+
+/** أقصى عرض للمحتوى المقروء على الشاشات الكبيرة */
+val MaxContentWidth = 720.dp
 
 /** زر مشاركة نص في شريط العنوان */
 @Composable
