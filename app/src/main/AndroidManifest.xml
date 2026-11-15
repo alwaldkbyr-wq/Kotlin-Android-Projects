@@ -1,21 +1,158 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+
     <application
+        android:name=".MawaqeetApp"
         android:allowBackup="true"
-        android:label="مواقيت"
-        android:icon="@drawable/mawaqeet_logo"
-        android:roundIcon="@drawable/mawaqeet_logo"
+        android:label="الساهور"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.Mawaqeet">
+
         <activity
             android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density">
+        </activity>
+
+        <!-- أيقونة التطبيق تتبع الثيم: اسم بديل لكل ثيم، ويُفعَّل واحد فقط -->
+        <activity-alias
+            android:name=".IconSpace"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_space"
+            android:roundIcon="@mipmap/ic_launcher_space"
+            android:label="الساهور"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMoonlight"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_moonlight"
+            android:roundIcon="@mipmap/ic_launcher_moonlight"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconNebula"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_nebula"
+            android:roundIcon="@mipmap/ic_launcher_nebula"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconAurora"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_aurora"
+            android:roundIcon="@mipmap/ic_launcher_aurora"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMars"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_mars"
+            android:roundIcon="@mipmap/ic_launcher_mars"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGalaxy"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_galaxy"
+            android:roundIcon="@mipmap/ic_launcher_galaxy"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconDawn"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_dawn"
+            android:roundIcon="@mipmap/ic_launcher_dawn"
+            android:label="الساهور"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- تنبيهات الصلاة -->
+        <receiver android:name=".notify.PrayerAlarmReceiver" android:exported="false" />
+        <receiver android:name=".notify.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <!-- الودجات -->
+        <receiver android:name=".widget.DateWidget" android:exported="true" android:label="الساهور: التاريخ">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_date" />
+        </receiver>
+        <receiver android:name=".widget.PrayerWidget" android:exported="true" android:label="الساهور: الصلاة القادمة">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_prayer" />
+        </receiver>
+        <receiver android:name=".widget.MoonWidget" android:exported="true" android:label="الساهور: القمر">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_moon" />
+        </receiver>
+
+        <!-- مشاركة الملفات المصدّرة -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>
