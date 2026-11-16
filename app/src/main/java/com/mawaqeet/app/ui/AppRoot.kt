@@ -113,6 +113,12 @@ object Routes {
     const val SETTINGS = "settings"
     const val LOCATIONS = "locations"
     const val DEVICE = "device"
+    const val NAVIGATOR = "navigator"
+    const val EMERGENCY = "emergency"
+    const val NATURAL_NAV = "natural_nav"
+    const val WATER_HEAT = "water_heat"
+    const val BAROMETER = "barometer"
+    const val SURVIVAL_GUIDE = "survival_guide"
 
     val tabs = listOf(HOME, CALENDAR, PRAYER, SKY, TOOLS)
 }
@@ -152,6 +158,12 @@ private fun ScreenFor(route: String) {
         Routes.SETTINGS -> SettingsScreen()
         Routes.LOCATIONS -> LocationsScreen()
         Routes.DEVICE -> DeviceInfoScreen()
+        Routes.NAVIGATOR -> NavigatorScreen()
+        Routes.EMERGENCY -> EmergencyScreen()
+        Routes.NATURAL_NAV -> NaturalNavScreen()
+        Routes.WATER_HEAT -> WaterHeatScreen()
+        Routes.BAROMETER -> BarometerScreen()
+        Routes.SURVIVAL_GUIDE -> SurvivalGuideScreen()
         else -> HomeScreen()
     }
 }

@@ -49,6 +49,15 @@ fun ToolsHubScreen() {
     val go = env.navigate
     ScreenScaffold(title = "الأدوات", subtitle = "خرائط وبوصلة وأدوات", topLevel = true) {
         ScreenList {
+            item { SectionTitle("الصحراء والطوارئ (دون إنترنت)") }
+            tileGrid(listOf(
+                TileSpec("الملاحة والعودة", "GPS، نقاط محفوظة، أثر العودة", Icons.Filled.MyLocation) { go(Routes.NAVIGATOR) },
+                TileSpec("الطوارئ", "موقعي، SOS بالكشاف، أرقام النجدة", Icons.Filled.Sos) { go(Routes.EMERGENCY) },
+                TileSpec("الاتجاه بالشمس والنجوم", "الشمال دون بوصلة", Icons.Filled.WbSunny) { go(Routes.NATURAL_NAV) },
+                TileSpec("الماء والحرارة", "حاجة الماء وأوقات المشي الآمنة", Icons.Filled.WaterDrop) { go(Routes.WATER_HEAT) },
+                TileSpec("الضغط والارتفاع", "البارومتر وتحذير العواصف", Icons.Filled.Speed) { go(Routes.BAROMETER) },
+                TileSpec("دليل البقاء", "إرشادات الصحراء دون اتصال", Icons.Filled.MenuBook) { go(Routes.SURVIVAL_GUIDE) }
+            ))
             item { SectionTitle("القبلة والبوصلة") }
             tileGrid(listOf(
                 TileSpec("البوصلة", "الشمس والقمر والقبلة", Icons.Filled.Explore) { go(Routes.COMPASS_2D) },
