@@ -1,5 +1,6 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.ui.graphics.nativeCanvas
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
