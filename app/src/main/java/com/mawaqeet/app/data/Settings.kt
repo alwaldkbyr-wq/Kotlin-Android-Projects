@@ -30,7 +30,7 @@ data class Place(
 
     companion object {
         fun fromJson(o: JSONObject) = Place(o.getString("n"), o.getDouble("la"), o.getDouble("lo"), o.optString("z", ZoneId.systemDefault().id), o.optDouble("h", 0.0), o.optBoolean("g", false))
-        val DEFAULT = Place("الجزائر العاصمة", 36.7538, 3.0588, "Africa/Algiers")
+        val DEFAULT = Place("مكة المكرمة", 21.4225, 39.8262, "Asia/Riyadh")
     }
 }
 
@@ -62,6 +62,13 @@ data class AppSettings(
     val notify: List<Boolean> = listOf(true, false, true, true, true, true),
     val notifyBefore: Int = 0,
     val notifySound: Boolean = true,
+    // تذكيرات إضافية (كلها متوقفة افتراضياً)
+    val remindFriday: Boolean = false,
+    /** دقائق التذكير قبل الظهر يوم الجمعة */
+    val fridayBefore: Int = 45,
+    val remindQiyam: Boolean = false,
+    val remindDuha: Boolean = false,
+    val remindImsak: Boolean = false,
     // المواقع
     val places: List<Place> = listOf(Place.DEFAULT),
     val placeIndex: Int = 0
@@ -119,6 +126,11 @@ class SettingsStore private constructor(context: Context) {
             notify = bools("notify", 6, d.notify),
             notifyBefore = sp.getInt("notifyBefore", d.notifyBefore),
             notifySound = sp.getBoolean("notifySound", d.notifySound),
+            remindFriday = sp.getBoolean("remindFriday", d.remindFriday),
+            fridayBefore = sp.getInt("fridayBefore", d.fridayBefore),
+            remindQiyam = sp.getBoolean("remindQiyam", d.remindQiyam),
+            remindDuha = sp.getBoolean("remindDuha", d.remindDuha),
+            remindImsak = sp.getBoolean("remindImsak", d.remindImsak),
             places = places,
             placeIndex = sp.getInt("placeIndex", 0).coerceIn(0, places.size - 1)
         )
@@ -134,6 +146,8 @@ class SettingsStore private constructor(context: Context) {
             .putString("offsets", s.offsets.joinToString(",")).putInt("dhuhrSafety", s.dhuhrSafety).putInt("maghribSafety", s.maghribSafety)
             .putString("notify", s.notify.joinToString(",") { if (it) "1" else "0" }).putInt("notifyBefore", s.notifyBefore)
             .putBoolean("notifySound", s.notifySound)
+            .putBoolean("remindFriday", s.remindFriday).putInt("fridayBefore", s.fridayBefore)
+            .putBoolean("remindQiyam", s.remindQiyam).putBoolean("remindDuha", s.remindDuha).putBoolean("remindImsak", s.remindImsak)
             .putString("places", JSONArray().also { a -> s.places.forEach { a.put(it.toJson()) } }.toString())
             .putInt("placeIndex", s.placeIndex)
             .apply()

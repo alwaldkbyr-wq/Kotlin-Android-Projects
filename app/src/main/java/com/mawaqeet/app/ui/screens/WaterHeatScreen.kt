@@ -208,7 +208,7 @@ fun WaterHeatScreen() {
                         valueColor = if (daysLast < 1) o.danger else if (daysLast < 2) o.warning else o.success)
                     if (!enough) {
                         Spacer(Modifier.height(4.dp))
-                        Text("الماء أقل من حاجة يوم كامل: قلّل الحركة في الحر، وتحرك ليلاً أو فجراً، وفكّر في طلب النجدة.", color = o.danger, style = MaterialTheme.typography.bodyMedium)
+                        Text("الماء أقل من حاجة يوم كامل: قلّل الحركة في الحر، وتحرك ليلاً أو فجراً، وفكّر في طلب المساعدة.", color = o.danger, style = MaterialTheme.typography.bodyMedium)
                     }
                     Spacer(Modifier.height(8.dp))
                     Text("لا تقنّن الماء إلى حد العطش: اشرب بانتظام؛ العطش ليس مؤشراً موثوقاً", color = o.warning, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Black)
@@ -306,10 +306,10 @@ fun WaterHeatScreen() {
                 }
             }
             item {
-                GlassCard(title = "ضربة الشمس: حالة طارئة", subtitle = "اتصل بالحماية المدنية 14") {
+                GlassCard(title = "ضربة الشمس: حالة طارئة", subtitle = "اتصل برقم الطوارئ في بلدك فوراً") {
                     WhBullet("العلامات: حرارة جسم عالية جداً (فوق 40°م)، جلد حار وجاف أو متعرق، تخليط أو هذيان، تشنجات، فقدان وعي، نبض سريع.")
                     Text("ما تفعله فوراً", color = o.danger, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
-                    WhBullet("اطلب النجدة فوراً (14 أو 1021 أو 112) وأرسل موقعك من شاشة «الطوارئ».")
+                    WhBullet("اطلب الإسعاف فوراً عبر رقم الطوارئ في بلدك وأرسل موقعك من شاشة «الطوارئ».")
                     WhBullet("نقله إلى الظل وتبريده بسرعة: ماء على الجسم كله ومراوحة، وكمادات باردة على الرقبة والإبط والفخذين.")
                     WhBullet("لا تسقِه إن كان فاقد الوعي أو مشوّش الإدراك.")
                     WhBullet("إن توقف تنفسه فابدأ الإنعاش القلبي الرئوي إن كنت تعرفه.")

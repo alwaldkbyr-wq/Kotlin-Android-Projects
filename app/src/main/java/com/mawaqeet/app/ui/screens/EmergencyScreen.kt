@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +55,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.mawaqeet.app.data.LocalEnv
 import com.mawaqeet.app.ui.components.Exporter
+import com.mawaqeet.app.ui.components.Field
 import com.mawaqeet.app.ui.components.Geo
+import com.mawaqeet.app.ui.components.GlassAlertDialog
 import com.mawaqeet.app.ui.components.GlassButton
 import com.mawaqeet.app.ui.components.GlassCard
 import com.mawaqeet.app.ui.components.GlassOutlinedButton
@@ -132,6 +135,15 @@ private fun emDial(ctx: Context, number: String) {
     }
 }
 
+
+private fun emLoadNumbers(s: String): List<Pair<String, String>> =
+    s.split('\n').mapNotNull { line ->
+        val k = line.indexOf('\t')
+        if (k < 0) null else (line.substring(0, k) to line.substring(k + 1)).takeIf { it.second.isNotBlank() }
+    }
+
+private fun emEncodeNumbers(l: List<Pair<String, String>>): String = l.joinToString("\n") { it.first + "\t" + it.second }
+
 /* ───────────── الشاشة ───────────── */
 
 @Composable
@@ -149,7 +161,7 @@ fun EmergencyScreen() {
 
     val coordsLine = String.format(Locale.US, "%.6f, %.6f", lat, lon)
     val dmsLine = "${Geo.dms(lat, true)}  ${Geo.dms(lon, false)}"
-    val message = "أحتاج مساعدة. موقعي: $coordsLine ($dmsLine) — الدقة $accText — الوقت: $timeText"
+    val message = "موقعي الحالي: $coordsLine ($dmsLine) — الدقة $accText — الوقت: $timeText"
 
     // وضعية المصباح: 0 مطفأ، 1 SOS، 2 ضوء ثابت
     var torchMode by remember { mutableIntStateOf(0) }
@@ -225,8 +237,19 @@ fun EmergencyScreen() {
     }
     DisposableEffect(Unit) { onDispose { torch.set(false) } }
 
+    // أرقامي: قائمة (الاسم، الرقم) محفوظة في SharedPreferences
+    val numPrefs = remember { ctx.getSharedPreferences("emergency_numbers", Context.MODE_PRIVATE) }
+    var myNumbers by remember { mutableStateOf(emLoadNumbers(numPrefs.getString("list", "") ?: "")) }
+    fun saveMyNumbers(l: List<Pair<String, String>>) {
+        myNumbers = l
+        numPrefs.edit().putString("list", emEncodeNumbers(l)).apply()
+    }
+    var editIndex by remember { mutableIntStateOf(-2) } // -2 مغلق، -1 إضافة، غير ذلك تعديل
+    var editName by remember { mutableStateOf("") }
+    var editNumber by remember { mutableStateOf("") }
+
     Box(Modifier.fillMaxSize()) {
-        ScreenScaffold(title = "الطوارئ", onBack = env.back, subtitle = "موقعك وإشارات الاستغاثة دون إنترنت") {
+        ScreenScaffold(title = "الطوارئ", onBack = env.back, subtitle = "موقعك وإشارات التنبيه والتواصل دون إنترنت") {
             ScreenList {
                 // ───── الموقع ─────
                 item {
@@ -280,39 +303,57 @@ fun EmergencyScreen() {
 
                 // ───── أرقام الطوارئ ─────
                 item {
-                    GlassCard(title = "أرقام الطوارئ في الجزائر", subtitle = "اضغط على الرقم لفتح الاتصال") {
-                        val services = listOf(
-                            "الحماية المدنية" to listOf("14", "1021"),
-                            "الدرك الوطني" to listOf("1055"),
-                            "الأمن الوطني" to listOf("17", "1548"),
-                            "الغابات" to listOf("1070")
-                        )
-                        services.forEach { (name, nums) ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(name, Modifier.weight(1f), color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                                nums.forEach { n ->
-                                    GlassTonalButton(onClick = { emDial(ctx, n) }, nav = true, modifier = Modifier.padding(start = 6.dp)) {
-                                        Icon(Icons.Filled.Call, null); Spacer(Modifier.width(6.dp)); Text(n, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                                    }
-                                }
-                            }
-                        }
-                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GlassCard(title = "أرقام الطوارئ", subtitle = "اضغط على الرقم لفتح الاتصال") {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("الرقم الدولي", color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                                Text("يعمل في كثير من الدول", color = o.muted, style = MaterialTheme.typography.labelMedium)
+                                Text("الرقم 112", color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                Text("يعمل في كثير من الدول والهواتف، وغالباً يُحوَّل إلى خدمة الطوارئ المحلية، وقد يعمل أحياناً دون شريحة SIM", color = o.muted, style = MaterialTheme.typography.labelMedium)
                             }
                             GlassTonalButton(onClick = { emDial(ctx, "112") }, nav = true) {
                                 Icon(Icons.Filled.Call, null); Spacer(Modifier.width(6.dp)); Text("112", fontSize = 18.sp, fontWeight = FontWeight.Black)
                             }
                         }
-                        Note("اتصل حتى لو ظهرت «مكالمات الطوارئ فقط»؛ فقد تعمل المكالمة عبر أي شبكة متاحة.")
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("الرقم 911", color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                Text("الرقم الثاني الذي تحوّله كثير من الهواتف والشبكات إلى الطوارئ", color = o.muted, style = MaterialTheme.typography.labelMedium)
+                            }
+                            GlassTonalButton(onClick = { emDial(ctx, "911") }, nav = true) {
+                                Icon(Icons.Filled.Call, null); Spacer(Modifier.width(6.dp)); Text("911", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        Note("رقم الطوارئ المحلي يختلف من بلد لآخر؛ ابحث عن رقم بلدك واحفظه في «أرقامي». واتصل حتى لو ظهرت «مكالمات الطوارئ فقط»؛ فقد تعمل المكالمة عبر أي شبكة متاحة.")
+                    }
+                }
+
+                // ───── أرقامي ─────
+                item {
+                    GlassCard(title = "أرقامي", subtitle = "أرقام تحفظها بنفسك، تُخزَّن على هاتفك فقط") {
+                        if (myNumbers.isEmpty()) {
+                            Text("لا توجد أرقام محفوظة بعد.", color = o.muted, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        myNumbers.forEachIndexed { i, e ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f).clickable { emDial(ctx, e.second) }) {
+                                    Text(e.first, color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                                    Text(e.second, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Black)
+                                }
+                                IconButton(onClick = { emDial(ctx, e.second) }) { Icon(Icons.Filled.Call, "اتصال", tint = MaterialTheme.colorScheme.primary) }
+                                IconButton(onClick = { editIndex = i; editName = e.first; editNumber = e.second }) { Icon(Icons.Filled.Edit, "تعديل", tint = o.muted) }
+                                IconButton(onClick = { saveMyNumbers(myNumbers.filterIndexed { k, _ -> k != i }) }) { Icon(Icons.Filled.Delete, "حذف", tint = o.danger) }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        GlassOutlinedButton(onClick = { editIndex = -1; editName = ""; editNumber = "" }, nav = true, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.Add, null); Spacer(Modifier.width(6.dp)); Text("إضافة رقم")
+                        }
+                        Note("احفظ أرقام الطوارئ في بلدك وأرقام من تثق بهم قبل الرحلة.")
                     }
                 }
 
                 // ───── الإشارات الضوئية والصوتية ─────
                 item {
-                    GlassCard(title = "إشارات الاستغاثة", subtitle = "SOS ضوئية وصوتية") {
+                    GlassCard(title = "إشارات التنبيه", subtitle = "SOS ضوئية وصوتية للاحتياط") {
                         if (torch.id == null) Text("لا يتوفر مصباح (فلاش) في هذا الجهاز؛ استخدم وميض الشاشة.", color = o.warning, style = MaterialTheme.typography.bodyMedium)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             EmToggle("SOS بالمصباح", Icons.Filled.FlashOn, torchMode == 1, Modifier.weight(1f)) { torchMode = if (torchMode == 1) 0 else 1 }
@@ -330,7 +371,7 @@ fun EmergencyScreen() {
                 // ───── البطارية ─────
                 item {
                     val pct = emBatteryPercent(ctx)
-                    GlassCard(title = "البطارية", subtitle = "حافظ عليها: هاتفك وسيلة إنقاذك") {
+                    GlassCard(title = "البطارية", subtitle = "حافظ عليها: هاتفك وسيلة تواصلك وملاحتك") {
                         InfoRow("مستوى الشحن", if (pct != null) "$pct%" else "--", valueColor = when {
                             pct == null -> Color.Unspecified
                             pct < 20 -> o.danger
@@ -347,7 +388,7 @@ fun EmergencyScreen() {
                 }
 
                 // ───── الإرشادات ─────
-                item { SectionTitle("إرشادات الاستغاثة") }
+                item { SectionTitle("إرشادات للاحتياط") }
                 item {
                     GlassCard(title = "المرآة العاكسة", subtitle = "ترى من مسافة تتجاوز 10 كم في الشمس") {
                         EmBullet("استعمل مرآة أو سطحاً لامعاً (غطاء علبة، شاشة هاتف مطفأة، قرص مضغوط).")
@@ -370,8 +411,38 @@ fun EmergencyScreen() {
                         Text("ثلاثة من أي شيء تعني خطراً: ثلاث صفارات، ثلاث وميضات ضوء، ثلاث نيران، ثلاث طلقات، ثلاثة أكوام من الحجارة، كلها بفواصل متساوية. كرّرها بعد دقيقة.", color = o.ink, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
-                item { Note("المرجع: إرشادات البقاء العامة. هذه الشاشة للمساعدة ولا تغني عن الاتصال بجهات الإنقاذ.") }
+                item { Note("هذه الشاشة للاحتياط ولا تغني عن الاتصال بجهات الطوارئ المحلية. الأفضل تجهيزها وتجربتها قبل الرحلة.") }
             }
+        }
+
+        if (editIndex != -2) {
+            val valid = editNumber.trim().isNotEmpty()
+            GlassAlertDialog(
+                onDismissRequest = { editIndex = -2 },
+                title = { Text(if (editIndex == -1) "إضافة رقم" else "تعديل الرقم") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field("الاسم", editName, { editName = it })
+                        Field("الرقم", editNumber, { editNumber = it }, phone = true)
+                    }
+                },
+                confirmButton = {
+                    GlassButton(
+                        onClick = {
+                            val name = editName.trim().replace('\t', ' ').replace('\n', ' ')
+                            val num = editNumber.trim().replace('\t', ' ').replace('\n', ' ')
+                            val entry = (if (name.isEmpty()) num else name) to num
+                            saveMyNumbers(
+                                if (editIndex == -1) myNumbers + entry
+                                else myNumbers.mapIndexed { k, old -> if (k == editIndex) entry else old }
+                            )
+                            editIndex = -2
+                        },
+                        enabled = valid, nav = true
+                    ) { Text("حفظ") }
+                },
+                dismissButton = { GlassTonalButton(onClick = { editIndex = -2 }, nav = true) { Text("إلغاء") } }
+            )
         }
 
         // ───── وميض الشاشة بملء الشاشة ─────

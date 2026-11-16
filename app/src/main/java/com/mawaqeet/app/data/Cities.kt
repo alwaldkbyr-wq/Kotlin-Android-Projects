@@ -1,6 +1,6 @@
 package com.mawaqeet.app.data
 
-/** قاعدة مدن مدمجة: ولايات الجزائر (58) ومدن الدول العربية وأهم مدن العالم */
+/** قاعدة مدن مدمجة: مدن الدول العربية والإسلامية وأهم مدن العالم */
 object Cities {
     private const val ALG = "Africa/Algiers"
 

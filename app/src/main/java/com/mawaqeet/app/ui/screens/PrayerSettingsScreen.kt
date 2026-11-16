@@ -54,6 +54,18 @@ private fun PrayerSettingsStepper(label: String, value: Int, min: Int, max: Int,
     }
 }
 
+@Composable
+private fun PrayerSettingsSwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val o = AppTheme.ornament
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            Text(title, color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = o.muted, style = MaterialTheme.typography.labelMedium)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
 private fun prayerSettingsMethodInfo(m: PrayerMethod): String {
     val isha = if (m.ishaMinutes > 0) "العشاء بعد المغرب بـ ${m.ishaMinutes} دقيقة" else "العشاء ${Fmt.num(m.isha, 1)}°"
     return "الفجر ${Fmt.num(m.fajr, 1)}° • $isha"
@@ -144,6 +156,21 @@ fun PrayerSettingsScreen() {
                         Text("صوت التنبيه", Modifier.weight(1f), color = o.ink, style = MaterialTheme.typography.bodyLarge)
                         Switch(checked = s.notifySound, onCheckedChange = { v -> env.update { it.copy(notifySound = v) } })
                     }
+                }
+            }
+            item {
+                GlassCard(title = "تذكيرات إضافية", subtitle = "اختيارية وكلها متوقفة افتراضياً") {
+                    PrayerSettingsSwitchRow("تذكير الجمعة", "قبل الظهر يوم الجمعة بـ ${s.fridayBefore} دقيقة", s.remindFriday) { v -> env.update { it.copy(remindFriday = v) } }
+                    if (s.remindFriday) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                            listOf(15, 30, 45, 60, 90).forEach { m ->
+                                GlassChip(selected = s.fridayBefore == m, onClick = { env.update { it.copy(fridayBefore = m) } }, label = { Text("$m د") })
+                            }
+                        }
+                    }
+                    PrayerSettingsSwitchRow("قيام الليل", "عند بداية الثلث الأخير من الليل (من المغرب إلى الفجر)", s.remindQiyam) { v -> env.update { it.copy(remindQiyam = v) } }
+                    PrayerSettingsSwitchRow("صلاة الضحى", "بعد الشروق بـ 20 دقيقة", s.remindDuha) { v -> env.update { it.copy(remindDuha = v) } }
+                    PrayerSettingsSwitchRow("الإمساك", "قبل الفجر بـ 10 دقائق، للصائم", s.remindImsak) { v -> env.update { it.copy(remindImsak = v) } }
                 }
             }
             item { Note("تفعيل التنبيه لكل صلاة يكون من شاشة المواقيت (أيقونة الجرس). تنبيه «الشروق» يذكّر بانتهاء وقت الفجر.") }

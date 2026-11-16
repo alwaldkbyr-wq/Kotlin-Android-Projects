@@ -32,7 +32,7 @@ enum class Prayer(val ar: String) {
 }
 
 data class PrayerSettings(
-    val method: PrayerMethod = PrayerMethod.ALGERIA,
+    val method: PrayerMethod = PrayerMethod.MWL,
     val hanafiAsr: Boolean = false,
     val highLat: HighLatRule = HighLatRule.ANGLE_BASED,
     /** تعديلات يدوية بالدقائق لكل صلاة بترتيب Prayer */

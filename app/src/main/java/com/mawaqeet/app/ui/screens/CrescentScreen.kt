@@ -1,5 +1,7 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,11 +23,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mawaqeet.app.astro.Body
 import com.mawaqeet.app.astro.Crescent
+import com.mawaqeet.app.astro.Ephemeris
+import com.mawaqeet.app.astro.atan2d
+import com.mawaqeet.app.astro.cosd
+import com.mawaqeet.app.astro.norm180
+import com.mawaqeet.app.astro.norm360
+import com.mawaqeet.app.astro.sind
 import com.mawaqeet.app.astro.CrescentReport
 import com.mawaqeet.app.astro.DAY_MS
 import com.mawaqeet.app.astro.PhaseKind
@@ -38,12 +53,15 @@ import com.mawaqeet.app.ui.components.InfoRow
 import com.mawaqeet.app.ui.components.MetricRow
 import com.mawaqeet.app.ui.components.Note
 import com.mawaqeet.app.ui.components.OsmMap
+import com.mawaqeet.app.ui.components.magneticDeclination
+import com.mawaqeet.app.ui.components.rememberPointing
 import com.mawaqeet.app.ui.components.Pill
 import com.mawaqeet.app.ui.components.ScreenList
 import com.mawaqeet.app.ui.components.ScreenScaffold
 import com.mawaqeet.app.ui.components.ShareAction
 import com.mawaqeet.app.ui.components.rememberComputed
 import com.mawaqeet.app.ui.theme.AppTheme
+import com.mawaqeet.app.ui.theme.CanvasFonts
 import com.mawaqeet.app.ui.theme.LocalDark
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Marker
@@ -156,6 +174,7 @@ fun CrescentScreen() {
                         else if (rep == null) item { Note("لا تغرب الشمس في هذه الليلة عند موقعك، فلا يُحسب تقرير الرؤية.") }
                         else {
                             item { CrescentDetails(rep) }
+                            item { CrescentGuide(rep, conj) }
                         }
                         item {
                             Note("هذه توقعات فلكية فقط (معيار يالوب 1997 ومعيار عودة 2004)، والإعلان الرسمي عن بداية الشهر يعتمد على الرؤية الفعلية وعلى الجهات المختصة في بلدك.")
@@ -247,4 +266,306 @@ private fun CrescentDetails(r: CrescentReport) {
         Text(r.odehText, color = o.muted, style = MaterialTheme.typography.bodyMedium)
     }
 }
+}
+
+/* ───────────────────────── دليل تحديد موضع الهلال ───────────────────────── */
+
+private class CrescentGuidePt(val t: Long, val alt: Double, val az: Double, val sunAlt: Double)
+
+private class CrescentGuideData(
+    val sunsetAz: Double,
+    val best: CrescentGuidePt,
+    val track: List<CrescentGuidePt>,
+    /** اتجاه الحافة المضيئة على الشاشة: 0 أعلى، 90 يمين، 180 أسفل، 270 يسار (للراصد المواجه للجرم) */
+    val brightAngle: Double,
+    val bestIllum: Double
+)
+
+private const val CG_STEP = 5 * 60_000L
+
+private fun crescentGuidePt(t: Long, lat: Double, lon: Double): CrescentGuidePt {
+    val m = Ephemeris.horizontal(Body.MOON, t, lat, lon, withRefraction = true)
+    val sn = Ephemeris.horizontal(Body.SUN, t, lat, lon, withRefraction = false)
+    return CrescentGuidePt(t, m.alt, m.az, sn.alt)
+}
+
+private fun crescentGuideCompute(sunset: Long, moonset: Long?, best: Long, lat: Double, lon: Double, illum: Double): CrescentGuideData {
+    val sunsetAz = Ephemeris.horizontal(Body.SUN, sunset, lat, lon, withRefraction = false).az
+    val end = minOf(moonset ?: (sunset + 120 * 60_000L), sunset + 150 * 60_000L)
+    val track = ArrayList<CrescentGuidePt>()
+    var t = sunset
+    while (t <= end) { track += crescentGuidePt(t, lat, lon); t += CG_STEP }
+    // اتجاه الحافة المضيئة: السمت الكروي من القمر إلى الشمس في الإحداثيات الأفقية
+    // (يعادل زاوية الموضع من الإحداثيات الاستوائية مطروحاً منها الزاوية المداريّة)
+    val m = Ephemeris.horizontal(Body.MOON, best, lat, lon, withRefraction = false)
+    val sn = Ephemeris.horizontal(Body.SUN, best, lat, lon, withRefraction = false)
+    val dA = sn.az - m.az
+    val theta = norm360(
+        atan2d(sind(dA) * cosd(sn.alt), cosd(m.alt) * sind(sn.alt) - sind(m.alt) * cosd(sn.alt) * cosd(dA))
+    )
+    return CrescentGuideData(sunsetAz, crescentGuidePt(best, lat, lon), track, theta, illum)
+}
+
+/** تحويل الدرجات إلى عرض اليد على بعد الذراع: قبضة ≈ 10°، إصبع ≈ 1.5° */
+private fun crescentHandText(deg: Double): String {
+    val d = Math.abs(deg)
+    if (d < 3.0) {
+        return when (val n = Math.round(d / 1.5).toInt().coerceAtLeast(1)) { 1 -> "نحو إصبع"; 2 -> "نحو إصبعين"; else -> "نحو $n أصابع" }
+    }
+    val halves = Math.round(d / 5.0).toInt().coerceAtLeast(1)
+    val whole = halves / 2
+    val half = halves % 2 == 1
+    val w = when (whole) { 0 -> ""; 1 -> "قبضة"; 2 -> "قبضتين"; else -> "$whole قبضات" }
+    return "نحو " + when {
+        whole == 0 -> "نصف قبضة"
+        half -> "$w ونصف"
+        else -> w
+    }
+}
+
+@Composable
+private fun CrescentGuide(r: CrescentReport, conj: Long) {
+    val env = LocalEnv.current
+    val o = AppTheme.ornament
+    val sunset = r.sunset ?: return
+    val moonset = r.moonset
+    val lag = r.lagMinutes
+    val impossible = conj > sunset || (moonset != null && lag <= 0.0)
+    val data: CrescentGuideData? = if (impossible) null else rememberComputed(sunset, moonset, env.lat, env.lon) {
+        val best = sunset + ((if (lag > 0) lag else 0.0) * 4 / 9 * 60000).toLong()
+        crescentGuideCompute(sunset, moonset, best, env.lat, env.lon, r.illumination)
+    }
+
+    Column(Modifier.fillMaxWidth()) {
+        if (impossible) {
+            GlassCard(title = "أين تنظر؟") {
+                Text(
+                    if (conj > sunset) "لم يقع الاقتران قبل غروب الشمس في هذا المساء، فرؤية الهلال مستحيلة فيه."
+                    else "يغرب القمر قبل الشمس أو معها (المكث ${Math.round(lag)} د)، فرؤية الهلال مستحيلة في هذا المساء.",
+                    color = o.danger, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold
+                )
+                Text("جرّب المساء التالي من الأزرار في الأعلى.", color = o.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+            }
+        } else if (data == null) {
+            Busy()
+        } else {
+            CrescentWhereCard(r, data, sunset, moonset, lag)
+            CrescentFinderCard(data, sunset, moonset)
+        }
+        CrescentTipsCard(impossible, lag)
+    }
+}
+
+@Composable
+private fun CrescentWhereCard(r: CrescentReport, d: CrescentGuideData, sunset: Long, moonset: Long?, lag: Double) {
+    val env = LocalEnv.current
+    val o = AppTheme.ornament
+    val dAz = norm180(d.best.az - d.sunsetAz)
+    val side = if (dAz > 0) "يمين" else "يسار"
+    val start = sunset + 10 * 60_000L
+    GlassCard(title = "أين تنظر؟", subtitle = "مواجهاً نقطة الغروب") {
+        InfoRow("نقطة غروب الشمس", "${Fmt.deg(d.sunsetAz)} • ${Fmt.direction(d.sunsetAz)}", emphasize = true)
+        Text(
+            (if (Math.abs(dAz) < 0.5) "انظر فوق نقطة الغروب مباشرة" else "انظر إلى $side نقطة الغروب بـ ${Fmt.deg(Math.abs(dAz))} (${crescentHandText(dAz)})") +
+                " وفوق الأفق بـ ${Fmt.deg(d.best.alt)} (${crescentHandText(d.best.alt)}).",
+            color = o.ink, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+        Text("القياس بذراع ممدودة: القبضة ≈ 10°، الكفّ المفتوح ≈ 15–20°، الإصبع ≈ 1–2°.", color = o.muted, style = MaterialTheme.typography.labelSmall)
+        InfoRow("سمت القمر وقت الرصد الأمثل", "${Fmt.deg(d.best.az)} • ${Fmt.direction(d.best.az)}")
+        InfoRow("ارتفاعه (مع الانكسار)", Fmt.deg(d.best.alt))
+        OrnamentGap()
+        Text("نافذة الرصد", color = o.gold, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        InfoRow("بداية الرصد (الغروب + 10 د)", env.time(start))
+        InfoRow("أفضل وقت (الغروب + 4/9 المكث)", env.time(d.best.t), emphasize = true)
+        InfoRow("غروب القمر (آخر فرصة)", if (moonset != null) env.time(moonset) else "لا يغرب")
+        InfoRow("المكث بعد الغروب", "${Math.round(lag)} دقيقة")
+        if (moonset != null && moonset <= start + 5 * 60_000L)
+            Text("ينتهي الوقت قبل أن تُظلم السماء كفاية؛ الرصد بالعين شبه مستحيل ويلزم أداة.", color = o.warning, style = MaterialTheme.typography.bodySmall)
+
+        OrnamentGap()
+        Text("شكل الهلال وميله", color = o.gold, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        val dev = norm180(d.brightAngle - 180.0)
+        val tiltText = when {
+            Math.abs(dev) < 5 -> "الحافة المضيئة إلى الأسفل مباشرة، والقرنان إلى الأعلى كابتسامة."
+            dev < 0 -> "الحافة المضيئة نحو الأسفل واليمين (تميل ${Fmt.deg(Math.abs(dev), 0)} عن الرأسي)، والقرنان إلى أعلى ويسار."
+            else -> "الحافة المضيئة نحو الأسفل واليسار (تميل ${Fmt.deg(Math.abs(dev), 0)} عن الرأسي)، والقرنان إلى أعلى ويمين."
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CrescentShape(d.brightAngle, d.bestIllum, Modifier.size(104.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tiltText, color = o.ink, style = MaterialTheme.typography.bodyMedium)
+                Text("القرنان يشيران إلى الأعلى بعيداً عن الشمس. الرسم تقريبي ومُكبَّر السمك لتوضيح الميل فقط.", color = o.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+
+        OrnamentGap()
+        Text("الارتفاع مع الزمن (كل 5 دقائق)", color = o.gold, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            listOf("الوقت", "ارتفاع القمر", "السمت", "الشمس تحت الأفق").forEach {
+                Text(it, Modifier.weight(1f), color = o.muted, style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
+        d.track.forEach { p ->
+            val dep = -p.sunAlt
+            val good = dep in 4.0..6.0 && p.alt > 2.0
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 1.dp)
+                    .background(if (good) o.gold.copy(alpha = 0.20f) else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                    .padding(vertical = 3.dp)
+            ) {
+                listOf(
+                    env.time(p.t) + if (good) " ★" else "",
+                    Fmt.deg(p.alt), Fmt.deg(p.az, 0), Fmt.deg(Math.max(dep, 0.0))
+                ).forEach {
+                    Text(it, Modifier.weight(1f), color = if (good) o.ink else o.muted, style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (good) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
+        Text("★ الصفوف المظللة: الشمس بين 4° و6° تحت الأفق والقمر فوق 2° — الأنسب للرصد.", color = o.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+@Composable
+private fun OrnamentGap() { Spacer(Modifier.height(10.dp)) }
+
+@Composable
+private fun CrescentShape(brightAngle: Double, illum: Double, modifier: Modifier) {
+    val o = AppTheme.ornament
+    val faint = o.muted.copy(alpha = 0.28f)
+    val lit = Color(0xFFFFE9A8)
+    val line = o.muted.copy(alpha = 0.5f)
+    // مبالغة في السمك للوضوح
+    val k = (illum * 6).coerceIn(0.10, 0.42).toFloat()
+    Canvas(modifier) {
+        val c = Offset(size.width / 2, size.height / 2)
+        val rad = size.minDimension / 2 - 8f
+        drawLine(line, Offset(2f, size.height - 3f), Offset(size.width - 2f, size.height - 3f), strokeWidth = 2f)
+        drawCircle(faint, radius = rad, center = c)
+        rotate(degrees = (brightAngle - 90.0).toFloat(), pivot = c) {
+            val rx = rad * (1 - 2 * k)
+            val path = Path().apply {
+                arcTo(Rect(c.x - rad, c.y - rad, c.x + rad, c.y + rad), -90f, 180f, true)
+                arcTo(Rect(c.x - rx, c.y - rad, c.x + rx, c.y + rad), 90f, -180f, false)
+                close()
+            }
+            drawPath(path, lit)
+        }
+        drawCircle(line, radius = rad, center = c, style = Stroke(width = 1.5f))
+    }
+}
+
+@Composable
+private fun CrescentFinderCard(d: CrescentGuideData, sunset: Long, moonset: Long?) {
+    val env = LocalEnv.current
+    val o = AppTheme.ornament
+    val pointing = rememberPointing().value
+    val decl = remember(env.lat, env.lon) { magneticDeclination(env.lat, env.lon) }
+    val heading = norm360(pointing.azimuthMagnetic + decl)
+    val pAlt = pointing.altitude
+    val avail = pointing.available
+
+    val now = env.now
+    val live = d.track.isNotEmpty() && now >= sunset && now <= d.track.last().t + CG_STEP
+    val tgt = if (live) d.track.minByOrNull { Math.abs(it.t - now) } ?: d.best else d.best
+    val dAz = norm180(tgt.az - heading)
+    val dAlt = tgt.alt - pAlt
+
+    var maxOff = 0.0
+    var maxAlt = 0.0
+    d.track.forEach { maxOff = Math.max(maxOff, Math.abs(norm180(it.az - d.sunsetAz))); maxAlt = Math.max(maxAlt, it.alt) }
+    val half = Math.max(30.0, maxOff + 10.0).coerceAtMost(90.0)
+    val altMax = Math.max(20.0, maxAlt + 6.0)
+    val center = d.sunsetAz
+
+    val ink = o.ink.toArgb()
+    val mutedC = o.muted
+    val gold = o.gold
+    val info = o.info
+    val sunColor = o.warning
+    val txt = remember(ink) {
+        android.graphics.Paint().apply {
+            color = ink; textSize = 24f; textAlign = android.graphics.Paint.Align.CENTER; isAntiAlias = true
+            typeface = CanvasFonts.text
+        }
+    }
+
+    GlassCard(title = "وجّه هاتفك", subtitle = "شريط الأفق حول نقطة الغروب") {
+        Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+            val w = size.width
+            val h = size.height
+            val padB = 30f
+            val padT = 10f
+            fun xOf(az: Double) = (w / 2 + norm180(az - center) / half * (w / 2 - 10f)).toFloat()
+            fun yOf(alt: Double) = (h - padB - alt / altMax * (h - padB - padT)).toFloat()
+            // الأرض والأفق
+            drawRect(mutedC.copy(alpha = 0.18f), topLeft = Offset(0f, yOf(0.0)), size = androidx.compose.ui.geometry.Size(w, h - yOf(0.0)))
+            drawLine(mutedC, Offset(0f, yOf(0.0)), Offset(w, yOf(0.0)), strokeWidth = 2f)
+            // تدريج السمت كل 10°
+            var k = -Math.floor(half / 10.0) * 10.0
+            while (k <= half) {
+                val x = xOf(center + k)
+                drawLine(mutedC.copy(alpha = 0.5f), Offset(x, yOf(0.0)), Offset(x, yOf(0.0) + 8f), strokeWidth = 1.5f)
+                drawContext.canvas.nativeCanvas.drawText(Math.round(norm360(center + k)).toInt().toString(), x, h - 6f, txt)
+                k += 10.0
+            }
+            // مسار القمر
+            d.track.forEachIndexed { i, p ->
+                if (p.alt > -1.0) drawCircle(if (p.t == d.best.t) gold else mutedC, radius = if (p.t == d.best.t) 9f else 4.5f, center = Offset(xOf(p.az), yOf(Math.max(p.alt, 0.0))),
+                    style = if (p.t == d.best.t) Stroke(3f) else androidx.compose.ui.graphics.drawscope.Fill)
+                if (i == 0) drawContext.canvas.nativeCanvas.drawText("☾", xOf(p.az), yOf(Math.max(p.alt, 0.0)) - 14f, txt)
+            }
+            // الشمس عند نقطة الغروب
+            drawCircle(sunColor, radius = 10f, center = Offset(xOf(center), yOf(0.0)))
+            // خط اتجاه الهاتف وارتفاعه
+            if (avail) {
+                val off = norm180(heading - center)
+                val hx = xOf(heading)
+                val a = if (Math.abs(off) > half) 0.45f else 1f
+                drawLine(info.copy(alpha = a), Offset(hx, padT), Offset(hx, yOf(0.0)), strokeWidth = 4f)
+                if (pAlt in 0.0..altMax) drawLine(info.copy(alpha = 0.6f), Offset(hx - 22f, yOf(pAlt)), Offset(hx + 22f, yOf(pAlt)), strokeWidth = 3f)
+            }
+        }
+        Text("● الشمس عند الغروب   ○ موضع الهلال كل 5 دقائق (الذهبي: الأمثل)   ┃ اتجاه ظهر الهاتف", color = o.muted, style = MaterialTheme.typography.labelSmall)
+        if (!avail) {
+            Text("حساسات الاتجاه غير متوفرة في هذا الجهاز؛ استعمل الأرقام أعلاه والبوصلة.", color = o.warning, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        } else {
+            InfoRow("اتجاه الهاتف الآن", "${Fmt.deg(heading, 0)} • ارتفاع ${Fmt.deg(pAlt, 0)}")
+            val ok = Math.abs(dAz) < 3 && Math.abs(dAlt) < 3
+            Text(
+                (if (live) "موضع الهلال الآن" else "موضع الهلال وقت الرصد الأمثل") + ": " +
+                    if (ok) "الهلال أمامك تقريباً — جرّب المنظار." else
+                        "${if (dAz > 0) "إلى يمينك" else "إلى يسارك"} بـ ${Fmt.deg(Math.abs(dAz), 0)} ${if (dAlt > 0) "وأعلى" else "وأخفض"} بـ ${Fmt.deg(Math.abs(dAlt), 0)}.",
+                color = if (ok) o.success else o.ink, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+        Text("أدر الهاتف حتى يتطابق الخط مع موضع الهلال. أمسك الهاتف قائماً وظهره نحو الأفق، وابتعد عن المعادن والمغانط لدقة البوصلة. الانحراف المغناطيسي مصحَّح (${Fmt.deg(decl)}).",
+            color = o.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+@Composable
+private fun CrescentTipsCard(impossible: Boolean, lag: Double) {
+    val o = AppTheme.ornament
+    val tips = listOf(
+        "اختر أفقاً غربياً مكشوفاً ومنبسطاً بعيداً عن أضواء المدينة والغبار؛ والمكان المرتفع أفضل.",
+        "احضر قبل الغروب وحدّد نقطة الغروب. لا تنظر إلى الشمس أبداً، ولا توجّه المنظار أو التلسكوب قرب الشمس قبل أن تغيب تماماً.",
+        "ابدأ المسح ببطء بالمنظار على بعد بضع درجات فوق الأفق، يمين نقطة الغروب أو يسارها كما حُسب أعلاه. وإذا وجدته فجرّب بالعين المجردة.",
+        "الهلال رفيع جداً وخافت وقريب من الأفق وسط وهج الشفق؛ والغبش والرطوبة يقلّلان الرؤية، والدقائق الأولى بعد الغروب غالباً ساطعة جداً.",
+        "دوّن وقت الرؤية وظروفها (الصفاء، الغيوم، الأداة المستعملة). وقد تلتبس الزهرة أو كوكب لامع آخر بالهلال.",
+        "هذه حسابات فلكية؛ والقرار في بداية الشهر يعود إلى الجهات المختصة في كل بلد."
+    )
+    GlassCard(title = "نصائح الرصد") {
+        if (impossible) Text("الرصد مستحيل في هذا المساء بحسب الحسابات${if (lag <= 0) " (المكث ${Math.round(lag)} د)" else ""}؛ النصائح أدناه للمساء الذي يليه.",
+            color = o.danger, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+        tips.forEach { t ->
+            Row(Modifier.padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("•", color = o.gold, style = MaterialTheme.typography.bodyMedium)
+                Text(t, Modifier.weight(1f), color = o.ink, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
 }

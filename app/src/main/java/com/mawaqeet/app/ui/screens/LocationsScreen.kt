@@ -130,7 +130,7 @@ fun LocationsScreen() {
             item { SectionTitle("إضافة مدينة") }
             item {
                 GlassCard {
-                    Field("ابحث عن مدينة (الجزائر، عربية، عالمية)", query, { query = it })
+                    Field("ابحث عن مدينة", query, { query = it })
                     Spacer(Modifier.height(8.dp))
                     val q = query.trim()
                     val results = if (q.isEmpty()) Cities.all.take(12) else Cities.all.filter { it.name.contains(q, ignoreCase = true) }

@@ -119,6 +119,12 @@ object Routes {
     const val WATER_HEAT = "water_heat"
     const val BAROMETER = "barometer"
     const val SURVIVAL_GUIDE = "survival_guide"
+    const val PRAYER_PARTS = "prayer_parts"
+    const val PRAYER_LOG = "prayer_log"
+    const val TASBIH = "tasbih"
+    const val QIBLA_SUN = "qibla_sun"
+    const val TRAVEL_PRAYER = "travel_prayer"
+    const val MULTI_CITY = "multi_city"
 
     val tabs = listOf(HOME, CALENDAR, PRAYER, SKY, TOOLS)
 }
@@ -164,6 +170,12 @@ private fun ScreenFor(route: String) {
         Routes.WATER_HEAT -> WaterHeatScreen()
         Routes.BAROMETER -> BarometerScreen()
         Routes.SURVIVAL_GUIDE -> SurvivalGuideScreen()
+        Routes.PRAYER_PARTS -> PrayerPartsScreen()
+        Routes.PRAYER_LOG -> PrayerLogScreen()
+        Routes.TASBIH -> TasbihScreen()
+        Routes.QIBLA_SUN -> QiblaSunScreen()
+        Routes.TRAVEL_PRAYER -> TravelPrayerScreen()
+        Routes.MULTI_CITY -> MultiCityPrayerScreen()
         else -> HomeScreen()
     }
 }

@@ -49,14 +49,23 @@ fun ToolsHubScreen() {
     val go = env.navigate
     ScreenScaffold(title = "الأدوات", subtitle = "خرائط وبوصلة وأدوات", topLevel = true) {
         ScreenList {
-            item { SectionTitle("الصحراء والطوارئ (دون إنترنت)") }
+            item { SectionTitle("الصلاة والوقت") }
             tileGrid(listOf(
-                TileSpec("الملاحة والعودة", "GPS، نقاط محفوظة، أثر العودة", Icons.Filled.MyLocation) { go(Routes.NAVIGATOR) },
+                TileSpec("تفصيل الأوقات", "الكراهة، أجزاء الليل، الساعات الزمانية", Icons.Filled.Schedule) { go(Routes.PRAYER_PARTS) },
+                TileSpec("سجل الصلوات والقضاء", "المتابعة اليومية وحاسبة الفوائت", Icons.Filled.CheckCircle) { go(Routes.PRAYER_LOG) },
+                TileSpec("المسبحة", "أذكار ما بعد الصلاة وعداد حر", Icons.Filled.TouchApp) { go(Routes.TASBIH) },
+                TileSpec("القبلة بالشمس والظل", "دون بوصلة، ورصد الشمس فوق الكعبة", Icons.Filled.WbSunny) { go(Routes.QIBLA_SUN) },
+                TileSpec("صلاة المسافر", "المسافة والقصر ومواقيت الوجهة", Icons.Filled.Luggage) { go(Routes.TRAVEL_PRAYER) },
+                TileSpec("المواقيت في عدة مدن", "مقارنة الأوقات بين المدن", Icons.Filled.Public) { go(Routes.MULTI_CITY) }
+            ))
+            item { SectionTitle("الرحلات والصحراء (دون إنترنت)") }
+            tileGrid(listOf(
+                TileSpec("الملاحة والعودة", "حفظ الأماكن والرجوع إليها", Icons.Filled.MyLocation) { go(Routes.NAVIGATOR) },
                 TileSpec("الطوارئ", "موقعي، SOS بالكشاف، أرقام النجدة", Icons.Filled.Sos) { go(Routes.EMERGENCY) },
                 TileSpec("الاتجاه بالشمس والنجوم", "الشمال دون بوصلة", Icons.Filled.WbSunny) { go(Routes.NATURAL_NAV) },
                 TileSpec("الماء والحرارة", "حاجة الماء وأوقات المشي الآمنة", Icons.Filled.WaterDrop) { go(Routes.WATER_HEAT) },
                 TileSpec("الضغط والارتفاع", "البارومتر وتحذير العواصف", Icons.Filled.Speed) { go(Routes.BAROMETER) },
-                TileSpec("دليل البقاء", "إرشادات الصحراء دون اتصال", Icons.Filled.MenuBook) { go(Routes.SURVIVAL_GUIDE) }
+                TileSpec("دليل الرحلات", "إرشادات البر والصحراء", Icons.Filled.MenuBook) { go(Routes.SURVIVAL_GUIDE) }
             ))
             item { SectionTitle("القبلة والبوصلة") }
             tileGrid(listOf(

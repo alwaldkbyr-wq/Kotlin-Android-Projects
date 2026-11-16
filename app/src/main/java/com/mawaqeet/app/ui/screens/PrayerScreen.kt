@@ -12,12 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +36,9 @@ import com.mawaqeet.app.data.Fmt
 import com.mawaqeet.app.data.LocalEnv
 import com.mawaqeet.app.ui.Routes
 import com.mawaqeet.app.ui.components.DayStepper
+import com.mawaqeet.app.ui.components.SectionTitle
+import com.mawaqeet.app.ui.components.TileSpec
+import com.mawaqeet.app.ui.components.tileGrid
 import com.mawaqeet.app.ui.components.GlassCard
 import com.mawaqeet.app.ui.components.GlassOutlinedButton
 import com.mawaqeet.app.ui.components.InfoRow
@@ -192,6 +190,15 @@ fun PrayerScreen() {
                     }
                 }
             }
+            item { SectionTitle("أدوات الصلاة") }
+            tileGrid(listOf(
+                TileSpec("تفصيل الأوقات", "الكراهة وأجزاء الليل", Icons.Filled.Schedule) { env.navigate(Routes.PRAYER_PARTS) },
+                TileSpec("سجل الصلوات", "المتابعة والقضاء", Icons.Filled.CheckCircle) { env.navigate(Routes.PRAYER_LOG) },
+                TileSpec("المسبحة", "أذكار بعد الصلاة", Icons.Filled.TouchApp) { env.navigate(Routes.TASBIH) },
+                TileSpec("القبلة بالشمس", "دون بوصلة", Icons.Filled.WbSunny) { env.navigate(Routes.QIBLA_SUN) },
+                TileSpec("صلاة المسافر", "القصر ومواقيت الوجهة", Icons.Filled.Luggage) { env.navigate(Routes.TRAVEL_PRAYER) },
+                TileSpec("عدة مدن", "مقارنة المواقيت", Icons.Filled.Public) { env.navigate(Routes.MULTI_CITY) }
+            ))
             item { Note("الأوقات محسوبة فلكياً للموقع المحدّد وقد تختلف دقائق قليلة عن التقاويم الرسمية المحلية؛ يمكن ضبط الفروق من إعدادات الصلاة.") }
         }
     }
