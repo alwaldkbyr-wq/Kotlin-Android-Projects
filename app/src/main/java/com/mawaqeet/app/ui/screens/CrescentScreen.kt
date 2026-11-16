@@ -1,5 +1,6 @@
 package com.mawaqeet.app.ui.screens
 
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
