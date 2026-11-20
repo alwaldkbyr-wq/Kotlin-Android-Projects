@@ -158,38 +158,100 @@ class MainActivity : ComponentActivity() {
         else locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
+    private val locHandler = android.os.Handler(Looper.getMainLooper())
+    private var locListener: LocationListener? = null
+    private var locStop: Runnable? = null
+
+    /**
+     * تحديد الموقع من كل المزوّدات المتاحة معاً (المدمج fused، وGPS، والشبكة)، مع الاستماع حتى دقيقتين:
+     * الهواتف الاقتصادية تحتاج وقتاً أطول لأول قراءة GPS، وبعضها بلا مزوّد شبكة.
+     */
     @SuppressLint("MissingPermission")
     private fun locate(silent: Boolean = false) {
         val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!androidx.core.location.LocationManagerCompat.isLocationEnabled(lm)) {
+            if (!silent) {
+                toast("خدمة الموقع متوقفة في الهاتف؛ فعّلها ثم أعد المحاولة")
+                runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+            }
+            return
+        }
         // إذن «الموقع التقريبي» وحده لا يسمح بمزوّد GPS ولا السلبي (يرمي SecurityException)
         val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
-            .filter { fine || it == LocationManager.NETWORK_PROVIDER }
-            .filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
-        if (providers.isEmpty()) { if (!silent) toast("خدمة الموقع متوقفة؛ فعّلها من إعدادات الهاتف"); return }
-        // آخر موقع معروف فوراً، ثم قراءة حديثة
-        providers.mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }.maxByOrNull { it.time }?.let { accept(it, silent = true) }
-        if (!silent) toast("جارٍ تحديد موقعك…")
-        val provider = when {
-            LocationManager.GPS_PROVIDER in providers -> LocationManager.GPS_PROVIDER
-            LocationManager.NETWORK_PROVIDER in providers -> LocationManager.NETWORK_PROVIDER
-            else -> return
-        }
-        try {
-            if (Build.VERSION.SDK_INT >= 30) {
-                lm.getCurrentLocation(provider, null, mainExecutor) { loc -> if (loc != null) accept(loc, silent) else if (!silent) toast("تعذّر تحديد الموقع الآن") }
-            } else {
-                @Suppress("DEPRECATION")
-                lm.requestSingleUpdate(provider, object : LocationListener {
-                    override fun onLocationChanged(l: Location) = accept(l, silent)
-                    @Deprecated("") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
-                    override fun onProviderEnabled(p: String) {}
-                    override fun onProviderDisabled(p: String) {}
-                }, Looper.getMainLooper())
+        val existing = runCatching { lm.allProviders }.getOrDefault(emptyList())
+        fun usable(p: String) = p in existing && runCatching { lm.isProviderEnabled(p) }.getOrDefault(false)
+        val providers = buildList {
+            if (Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+            if (fine) add(LocationManager.GPS_PROVIDER)
+            add(LocationManager.NETWORK_PROVIDER)
+        }.filter { usable(it) }
+
+        // آخر موقع معروف فوراً (من أي مزوّد، ومنه السلبي)
+        val lastKnown = (providers + if (fine) listOf(LocationManager.PASSIVE_PROVIDER) else emptyList())
+            .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
+            .maxByOrNull { it.time }
+        lastKnown?.let { accept(it, silent = true) }
+        val freshEnough = lastKnown != null && System.currentTimeMillis() - lastKnown.time < 2 * 60_000L &&
+            lastKnown.hasAccuracy() && lastKnown.accuracy <= 100f
+
+        if (providers.isEmpty()) {
+            if (!silent && lastKnown == null) {
+                toast(if (!fine) "اسمح للتطبيق بـ«الموقع الدقيق» من إعدادات التطبيق، أو اختر مدينتك من قائمة المواقع"
+                      else "لا يتوفر مزوّد موقع في هذا الهاتف؛ اختر مدينتك من قائمة المواقع")
             }
-        } catch (e: Exception) {
-            if (!silent) toast("تعذّر تحديد الموقع الآن")
+            return
         }
+        if (freshEnough) { if (!silent) toast(String.format(Locale.US, "تم تحديد الموقع: %.4f، %.4f", lastKnown!!.latitude, lastKnown.longitude)); return }
+
+        stopLocating()
+        if (!silent) toast("جارٍ تحديد موقعك… قد يستغرق دقيقة، ويكون أسرع في مكان مكشوف")
+        var got = false
+        var best: Location? = null
+        val listener = object : LocationListener {
+            override fun onLocationChanged(l: Location) {
+                val b = best
+                val better = b == null || !l.hasAccuracy() || !b.hasAccuracy() || l.accuracy <= b.accuracy ||
+                    l.time - b.time > 30_000L
+                if (!better) return
+                best = l
+                accept(l, silent = silent || got)
+                got = true
+                // دقة كافية لحساب المواقيت والقبلة: نتوقف
+                if (l.hasAccuracy() && l.accuracy <= 50f) stopLocating()
+            }
+            @Deprecated("") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
+            override fun onProviderEnabled(p: String) {}
+            override fun onProviderDisabled(p: String) {}
+        }
+        locListener = listener
+        var started = 0
+        providers.forEach { p ->
+            runCatching { lm.requestLocationUpdates(p, 1000L, 0f, listener, Looper.getMainLooper()); started++ }
+        }
+        if (started == 0) { locListener = null; if (!silent) toast("تعذّر تحديد الموقع الآن"); return }
+        val stop = Runnable {
+            stopLocating()
+            if (!got && !silent) toast(
+                if (lastKnown != null) "تعذّر الحصول على قراءة جديدة؛ استُعمل آخر موقع معروف. جرّب في مكان مكشوف"
+                else "تعذّر تحديد الموقع. اخرج إلى مكان مكشوف، وفعّل «دقة الموقع» في إعدادات الهاتف، أو اختر مدينتك من القائمة"
+            )
+        }
+        locStop = stop
+        locHandler.postDelayed(stop, 120_000L)
+    }
+
+    private fun stopLocating() {
+        locStop?.let { locHandler.removeCallbacks(it) }
+        locStop = null
+        val l = locListener ?: return
+        locListener = null
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        runCatching { lm.removeUpdates(l) }
+    }
+
+    override fun onDestroy() {
+        stopLocating()
+        super.onDestroy()
     }
 
     private fun accept(l: Location, silent: Boolean) {

@@ -68,15 +68,24 @@ fun rememberGpsFix(intervalMs: Long = 1000L, enabled: Boolean = true): State<Gps
             .mapNotNull { p -> runCatching { lm.getLastKnownLocation(p) }.getOrNull() }
             .maxByOrNull { it.time }?.let { state.value = toFix(it) }
         val listener = object : LocationListener {
-            override fun onLocationChanged(l: Location) { state.value = toFix(l) }
+            override fun onLocationChanged(l: Location) {
+                val cur = state.value
+                // لا نستبدل قراءة GPS دقيقة بقراءة شبكة أضعف وردت بعدها مباشرة
+                if (cur != null && l.hasAccuracy() && l.accuracy > cur.accuracy * 2 && l.time - cur.time < 15_000L) return
+                state.value = toFix(l)
+            }
             @Deprecated("") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
             override fun onProviderEnabled(p: String) {}
             override fun onProviderDisabled(p: String) {}
         }
+        val existing = runCatching { lm.allProviders }.getOrDefault(emptyList())
+        fun usable(p: String) = p in existing && runCatching { lm.isProviderEnabled(p) }.getOrDefault(false)
+        // GPS أولاً، مع المدمج والشبكة معاً: الهواتف الضعيفة تتأخر في أول قراءة GPS
         val providers = buildList {
-            if (fine && runCatching { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false)) add(LocationManager.GPS_PROVIDER)
-            if (runCatching { lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)) add(LocationManager.NETWORK_PROVIDER)
-        }
+            if (fine) add(LocationManager.GPS_PROVIDER)
+            if (android.os.Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+            add(LocationManager.NETWORK_PROVIDER)
+        }.filter { usable(it) }
         providers.forEach { p -> runCatching { lm.requestLocationUpdates(p, intervalMs, 0f, listener, Looper.getMainLooper()) } }
         onDispose { runCatching { lm.removeUpdates(listener) } }
     }
