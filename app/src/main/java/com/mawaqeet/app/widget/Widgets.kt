@@ -44,6 +44,9 @@ object Widgets {
         runCatching { DateWidget.update(app, mgr, ids(app, mgr, DateWidget::class.java)) }
         runCatching { PrayerWidget.update(app, mgr, ids(app, mgr, PrayerWidget::class.java)) }
         runCatching { MoonWidget.update(app, mgr, ids(app, mgr, MoonWidget::class.java)) }
+        runCatching { GlassPrayerWidget.update(app, mgr, ids(app, mgr, GlassPrayerWidget::class.java)) }
+        runCatching { GlassHijriWidget.update(app, mgr, ids(app, mgr, GlassHijriWidget::class.java)) }
+        runCatching { GlassDayWidget.update(app, mgr, ids(app, mgr, GlassDayWidget::class.java)) }
         runCatching { scheduleRefresh(app) }
     }
 
@@ -195,7 +198,7 @@ object WidgetText {
 
     class Line(val text: String, val sp: Float, val color: Int, val display: Boolean = false, val bold: Boolean = false)
 
-    private fun font(context: Context, display: Boolean, bold: Boolean): android.graphics.Typeface {
+    internal fun font(context: Context, display: Boolean, bold: Boolean): android.graphics.Typeface {
         val id = when {
             display && bold -> R.font.thmanyah_serif_display_bold
             display -> R.font.thmanyah_serif_display_medium

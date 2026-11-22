@@ -12,8 +12,8 @@ android {
         applicationId = "com.mawaqeet.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "2.9.1"
+        versionCode = 27
+        versionName = "2.10.0"
         resourceConfigurations += listOf("ar", "en")
     }
 

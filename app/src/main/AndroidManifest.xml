@@ -146,6 +146,19 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_moon" />
         </receiver>
 
+        <receiver android:name=".widget.GlassPrayerWidget" android:exported="true" android:label="الساهور: الصلاة (زجاجي)">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_glass_prayer" />
+        </receiver>
+        <receiver android:name=".widget.GlassHijriWidget" android:exported="true" android:label="الساهور: التاريخ الهجري (زجاجي)">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_glass_hijri" />
+        </receiver>
+        <receiver android:name=".widget.GlassDayWidget" android:exported="true" android:label="الساهور: اليوم (زجاجي)">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_glass_day" />
+        </receiver>
+
         <!-- مشاركة الملفات المصدّرة -->
         <provider
             android:name="androidx.core.content.FileProvider"
